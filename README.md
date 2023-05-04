@@ -81,7 +81,7 @@ By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
 
 <p align="center">
-  <img width="460" height="300" src="https://github.com/SonyCSLParis/pesto/blob/master/images/alwa.png?raw=true">
+  <img src="https://github.com/SonyCSLParis/pesto/blob/master/images/alwa.png?raw=true">
 </p>
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.

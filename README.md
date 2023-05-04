@@ -56,7 +56,7 @@ This structure is voluntarily the same as in [CREPE](https://github.com/marl/cre
 Alternatively, one can choose to save timesteps, pitch, confidence and activation outputs as a `.npz` file.
 
 Finally, you can also visualize the pitch predictions by exporting them as a `png` file. Here is an example:
-**TODO**
+![alt text](https://github.com/SonyCSLParis/pesto/blob/master/examples/example.f0.png?raw=true)
 
 Multiple formats can be specified after the `-e` option.
 
@@ -79,7 +79,7 @@ Additionally, audio files can have any sampling rate, no resampling is required.
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
 
-$$\textcent = \dfrac{\sum_{i=m-2} y_i \textcent_i}{\sum^{m+2}_{i=m-2} y_i \textcent_i} \text{,   with   } m = \arg\max y$$
+![alt text](https://github.com/SonyCSLParis/pesto/blob/master/images/alwa.png?raw=true)
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 

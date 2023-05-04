@@ -42,7 +42,9 @@ def predict(
     if convert_to_freq:
         pitch = 440 * 2 ** ((pitch - 69) / 12)
 
-    confidence = torch.ones_like(pitch)  # TODO: implement confidence score
+    # for now, confidence is computed very naively just based on volume
+    confidence = cqt.squeeze(1).max(dim=1).values
+    confidence = (confidence - confidence.min()) / (confidence.max() - confidence.min())
 
     timesteps = torch.arange(len(pitch)) * data_preprocessor.step_size
 

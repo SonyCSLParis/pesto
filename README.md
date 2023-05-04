@@ -1,11 +1,3 @@
-[//]: # (<script)
-
-[//]: # (  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML")
-
-[//]: # (  type="text/javascript">)
-
-[//]: # (</script>)
-
 # PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective
 
 **tl;dr**: Fast and powerful pitch estimator based on machine learning
@@ -87,7 +79,7 @@ Additionally, audio files can have any sampling rate, no resampling is required.
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
 
-$$\textcent = \dfrac{\sum_{i=m-2}^{m+2} y_i \textcent_i}{\sum_{i=m-2}^{m+2} y_i \textcent_i}$$
+$$\textcent = \dfrac{\sum^{m+2}_{i=m-2} y_i \textcent_i}{\sum^{m+2}_{i=m-2} y_i \textcent_i} \text{, with } m = \arg\max_i y_i$$
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 

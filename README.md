@@ -57,7 +57,7 @@ Alternatively, one can choose to save timesteps, pitch, confidence and activatio
 
 Finally, you can also visualize the pitch predictions by exporting them as a `png` file. Here is an example:
 <p align="center">
-  <img width="460" height="300" src="https://github.com/SonyCSLParis/pesto/blob/master/examples/example.f0.png?raw=true">
+  <img src="https://github.com/SonyCSLParis/pesto/blob/master/examples/example.f0.png?raw=true">
 </p>
 Multiple formats can be specified after the `-e` option.
 

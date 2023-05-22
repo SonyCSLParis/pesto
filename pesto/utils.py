@@ -2,17 +2,17 @@ import os
 
 import torch
 
-import config
-from data import DataProcessor
-from model import PESTOEncoder
+from pesto.config import model_args, cqt_args, bins_per_semitone
+from pesto.data import DataProcessor
+from pesto.model import PESTOEncoder
 
 
 def load_dataprocessor(device: torch.device | None = None):
-    return DataProcessor(**config.cqt_args).to(device)
+    return DataProcessor(**cqt_args).to(device)
 
 
 def load_model(model_name: str, device: torch.device | None = None) -> PESTOEncoder:
-    model = PESTOEncoder(**config.model_args).to(device)
+    model = PESTOEncoder(**model_args).to(device)
     model.eval()
 
     model_path = os.path.join(os.path.dirname(__file__), "weights", model_name + ".pth")
@@ -31,7 +31,7 @@ def reduce_activation(activations: torch.Tensor, reduction: str):
     Returns:
 
     """
-    bps = config.bins_per_semitone
+    bps = bins_per_semitone
     if reduction == "argmax":
         pred = activations.argmax(dim=1)
         return pred.float() / bps

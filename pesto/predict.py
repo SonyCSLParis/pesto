@@ -4,8 +4,8 @@ from typing import Sequence
 import torch
 import torchaudio
 
-import utils
-from export import export
+from pesto.utils import load_model, load_dataprocessor, reduce_activation
+from pesto.export import export
 
 
 def predict(
@@ -22,10 +22,10 @@ def predict(
     x = x.mean(dim=0)
 
     if data_preprocessor is None:
-        data_preprocessor = utils.load_dataprocessor(device=x.device)
+        data_preprocessor = load_dataprocessor(device=x.device)
 
     if isinstance(model, str):
-        model = utils.load_model(model, device=x.device)
+        model = load_model(model, device=x.device)
         assert sr and hop_length, \
             "You must specify the sampling rate and hop length when calling directly `pesto.predict`"
         data_preprocessor.init_cqt_layer(sr=sr, hop_length=hop_length, device=x.device)
@@ -38,7 +38,7 @@ def predict(
     activations = activations.roll(model.abs_shift.cpu().item(), dims=1)
 
     # convert model predictions to pitch values
-    pitch = utils.reduce_activation(activations, reduction=reduction)
+    pitch = reduce_activation(activations, reduction=reduction)
     if convert_to_freq:
         pitch = 440 * 2 ** ((pitch - 69) / 12)
 
@@ -80,11 +80,11 @@ def predict_from_files(
     device = torch.device(f"cuda:{gpu:d}" if gpu >= 0 else "cpu")
 
     # define data preprocessing
-    data_preprocessor = utils.load_dataprocessor(device=device)
+    data_preprocessor = load_dataprocessor(device=device)
     current_sr = None
 
     # define model
-    model = utils.load_model(model_name, device=device)
+    model = load_model(model_name, device=device)
     predictions = None
 
     n_files = len(audio_files)

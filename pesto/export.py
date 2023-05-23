@@ -13,7 +13,7 @@ def export(fmt, output_file, timesteps, pitch, confidence, activations):
         export_npy(output_file, timesteps, pitch, confidence, activations)
 
     elif fmt == "png":
-        export_png(output_file, timesteps, pitch, confidence, activations)
+        export_png(output_file, timesteps, confidence, activations)
 
     else:
         raise ValueError

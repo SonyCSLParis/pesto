@@ -114,6 +114,7 @@ def predict_from_files(
             os.makedirs(output, exist_ok=True)
             output_file = os.path.join(output, os.path.basename(output_file))
 
+        predictions = [p.cpu().numpy() for p in predictions]
         for fmt in export_format:
             export(fmt, output_file, *predictions)
 

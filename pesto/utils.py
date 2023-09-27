@@ -21,15 +21,16 @@ def load_model(model_name: str, device: torch.device | None = None) -> PESTOEnco
     return model
 
 
-def reduce_activation(activations: torch.Tensor, reduction: str):
-    r"""
+def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor:
+    r"""Computes the pitch predictions from the activation outputs of the encoder.
+    Pitch predictions are returned in semitones, NOT in frequencies.
 
     Args:
         activations: tensor of probability activations, shape (num_frames, num_bins)
         reduction:
 
     Returns:
-
+        torch.Tensor: pitch predictions, shape (num_frames,)
     """
     bps = bins_per_semitone
     if reduction == "argmax":
@@ -42,7 +43,7 @@ def reduce_activation(activations: torch.Tensor, reduction: str):
 
     if reduction == "alwa":  # argmax-local weighted averaging, see https://github.dev/marl/crepe
         center_bin = activations.argmax(dim=1, keepdim=True)
-        window = torch.arange(-bps+1, bps)
+        window = torch.arange(-bps+1, bps, device=activations.device)
         indices = window + center_bin
         cropped_activations = activations.gather(1, indices)
         cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(1, indices)

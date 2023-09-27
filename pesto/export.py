@@ -1,5 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
+try:
+    MATPLOTLIB_AVAILABLE = True
+    import matplotlib.pyplot as plt
+except (IndexError, ModuleNotFoundError):
+    MATPLOTLIB_AVAILABLE = False
 
 import torch
 
@@ -31,6 +35,8 @@ def export_npy(output_file, timesteps, pitch, confidence, activations):
 
 
 def export_png(output_file, timesteps, confidence, activations, lims=(21, 109)):
+    assert MATPLOTLIB_AVAILABLE, "Exporting in PNG format requires Matplotlib to be installed."
+
     bps = activations.size(1) // 128
     activations = activations[:, bps*lims[0]: bps*lims[1]]
     activations = activations * confidence.unsqueeze(1)

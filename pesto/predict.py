@@ -1,4 +1,5 @@
 import os
+import warnings
 from typing import Sequence
 
 import torch
@@ -65,18 +66,21 @@ def predict_from_files(
     r"""
 
     Args:
-        audio_files:
-        model_name:
+        audio_files: audio files to process
+        model_name: name of the model. Currently only `mir-1k` is supported.
         output:
         step_size: hop length in milliseconds
         reduction:
         export_format:
         no_convert_to_freq: whether convert output values to Hz or keep fractional MIDI pitches
-        gpu:
+        gpu: index of GPU to use (-1 for CPU)
 
     Returns:
-
+        Pitch predictions, see `predict` for more details.
     """
+    if gpu >= 0 and not torch.cuda.is_available():
+        warnings.warn("You're trying to use the GPU but no GPU has been found. Using CPU instead...")
+        gpu = -1
     device = torch.device(f"cuda:{gpu:d}" if gpu >= 0 else "cpu")
 
     # define data preprocessing

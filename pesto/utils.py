@@ -36,7 +36,7 @@ def reduce_activation(activations: torch.Tensor, reduction: str):
         pred = activations.argmax(dim=1)
         return pred.float() / bps
 
-    all_pitches = (torch.arange(activations.size(1), dtype=torch.float)) / bps
+    all_pitches = (torch.arange(activations.size(1), dtype=torch.float, device=activations.device)) / bps
     if reduction == "mean":
         return torch.mm(activations, all_pitches)
 

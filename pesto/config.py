@@ -9,14 +9,11 @@ if center_bins:
 
 
 model_args = dict(
-    n_chan_input=1,
     n_chan_layers=(40, 30, 30, 10, 3),
     n_prefilt_layers=2,
     residual=True,
     n_bins_in=88*bins_per_semitone,
-    output_dim=128*bins_per_semitone,
-    activation_fn="leaky",
-    a_lrelu=0.3
+    output_dim=128*bins_per_semitone
 )
 
 

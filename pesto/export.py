@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 try:
     MATPLOTLIB_AVAILABLE = True
@@ -34,8 +36,10 @@ def export_npy(output_file, timesteps, pitch, confidence, activations):
     np.savez(output_file, timesteps=timesteps, pitch=pitch, confidence=confidence, activations=activations)
 
 
-def export_png(output_file, timesteps, confidence, activations, lims=(21, 109)):
-    assert MATPLOTLIB_AVAILABLE, "Exporting in PNG format requires Matplotlib to be installed."
+def export_png(output_file, timesteps, confidence, activations, lims=(21, 109)) -> None:
+    if not MATPLOTLIB_AVAILABLE:
+        warnings.warn("Exporting in PNG format requires Matplotlib to be installed. Skipping...")
+        return
 
     bps = activations.size(1) // 128
     activations = activations[:, bps*lims[0]: bps*lims[1]]

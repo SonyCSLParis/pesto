@@ -120,7 +120,7 @@ def predict_from_files(
             convert_to_freq=not no_convert_to_freq
         )
 
-        output_file = file.rsplit('.', 1)[0] + ".f0"
+        output_file = file.rsplit('.', 1)[0] + "." + "semitones" if no_convert_to_freq else "f0"
         if output is not None:
             os.makedirs(output, exist_ok=True)
             output_file = os.path.join(output, os.path.basename(output_file))

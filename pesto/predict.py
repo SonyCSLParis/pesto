@@ -6,7 +6,7 @@ import torch
 import torchaudio
 from tqdm import tqdm
 
-from pesto.utils import load_model, load_dataprocessor, reduce_activation, format_time
+from pesto.utils import load_model, load_dataprocessor, reduce_activation
 from pesto.export import export
 
 

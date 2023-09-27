@@ -51,7 +51,7 @@ class PESTOEncoder(nn.Module):
     ):
         super(PESTOEncoder, self).__init__()
 
-        activation_layer = partial(nn.LeakyReLU, negative_slope=a_lrelu)
+        activation_layer = partial(nn.LeakyReLU, negative_slope=0.3)
 
         n_ch = n_chan_layers
         if len(n_ch) < 5:

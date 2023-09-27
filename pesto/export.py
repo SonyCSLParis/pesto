@@ -20,7 +20,7 @@ def export(fmt, output_file, timesteps, pitch, confidence, activations):
         export_png(output_file, timesteps, pitch, confidence, activations)
 
     else:
-        raise ValueError, f"Invalid export type detected, choose either `csv`, `npz` or `png`. Got {fmt}."
+        raise ValueError(f"Invalid export type detected, choose either `csv`, `npz` or `png`. Got {fmt}.")
 
 
 def export_csv(output_file, timesteps, pitch, confidence):

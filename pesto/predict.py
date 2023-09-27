@@ -102,7 +102,12 @@ def predict_from_files(
         print(f"[{i+1}/{n_files}]", file, end_spaces, end='\r')
 
         # load audio file
-        x, sr = torchaudio.load(file)
+        try:
+            x, sr = torchaudio.load(file)
+        except Exception as e:
+            print(e, f"Skipping {file}...")
+            continue
+
         x = x.to(device)
 
         # if the sampling rate has changed, recompute the CQT kernels

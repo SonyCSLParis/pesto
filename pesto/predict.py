@@ -33,7 +33,6 @@ def predict(
     # apply model
     cqt = data_preprocessor(x)
     activations = model(cqt)
-    print(activations.shape)
 
     # shift activations as it should
     activations = activations.roll(model.abs_shift.cpu().item(), dims=1)

@@ -19,7 +19,7 @@ def export(fmt, output_file, timesteps, pitch, confidence, activations):
         export_npy(output_file, timesteps, pitch, confidence, activations)
 
     elif fmt == "png":
-        export_png(output_file, timesteps, pitch, confidence, activations)
+        export_png(output_file, timesteps, confidence, activations)
 
     else:
         raise ValueError(f"Invalid export type detected, choose either `csv`, `npz` or `png`. Got {fmt}.")
@@ -40,7 +40,7 @@ def export_png(output_file: str, timesteps, confidence, activations, lims=(21, 1
     if not MATPLOTLIB_AVAILABLE:
         warnings.warn("Exporting in PNG format requires Matplotlib to be installed. Skipping...")
         return
-    print(activations.shape)
+
     bps = activations.size(1) // 128
     activations = activations[:, bps*lims[0]: bps*lims[1]]
     activations = activations * confidence.unsqueeze(1)

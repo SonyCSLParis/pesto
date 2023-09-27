@@ -50,3 +50,10 @@ def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor
         return (cropped_activations * cropped_pitches).sum(dim=1) / cropped_activations.sum(dim=1)
 
     raise ValueError
+
+
+def format_time(t: float):
+    if t < 60:
+        return f"{t:.3f}s"
+    m, s = divmod(t, 60)
+    return f"{m:d}min {s:.3f}s"

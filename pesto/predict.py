@@ -1,11 +1,12 @@
 import os
+import time
 import warnings
 from typing import Sequence
 
 import torch
 import torchaudio
 
-from pesto.utils import load_model, load_dataprocessor, reduce_activation
+from pesto.utils import load_model, load_dataprocessor, reduce_activation, format_time
 from pesto.export import export
 
 
@@ -78,6 +79,8 @@ def predict_from_files(
     Returns:
         Pitch predictions, see `predict` for more details.
     """
+    t0 = time.time()
+
     if gpu >= 0 and not torch.cuda.is_available():
         warnings.warn("You're trying to use the GPU but no GPU has been found. Using CPU instead...")
         gpu = -1
@@ -121,5 +124,9 @@ def predict_from_files(
         predictions = [p.cpu().numpy() for p in predictions]
         for fmt in export_format:
             export(fmt, output_file, *predictions)
+
+    t1 = time.time()
+
+    print(f"Successfully predicted pitch for {len(audio_files)} files in {format_time(t1-t0)}.")
 
     return predictions

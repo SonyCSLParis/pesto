@@ -46,7 +46,7 @@ def predict(
     confidence = cqt.squeeze(1).max(dim=1).values
     confidence = (confidence - confidence.min()) / (confidence.max() - confidence.min())
 
-    timesteps = torch.arange(len(pitch)) * data_preprocessor.step_size
+    timesteps = torch.arange(len(pitch), device=x.device) * data_preprocessor.step_size
 
     return timesteps, pitch, confidence, activations
 

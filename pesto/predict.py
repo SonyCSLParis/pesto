@@ -98,7 +98,7 @@ def predict_from_files(
     len_last_info = 0
     for i, file in enumerate(audio_files):
         msg = f"[{i+1}/{n_files}] {file}"
-        spaces = min(len_last_info - len(msg), 0) * ' '
+        spaces = min(len_last_info - len(msg) + 1, 0) * ' '
         len_last_info = len(msg)
         print(msg + spaces, end='\r')
 

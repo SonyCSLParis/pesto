@@ -11,7 +11,10 @@ If you want full implementation details or want to use PESTO for research purpos
 ```shell
 pip install pesto
 ```
-*not possible yet*
+
+### Common issues
+
+- When 
 
 ### Dependencies
 

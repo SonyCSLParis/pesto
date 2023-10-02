@@ -101,6 +101,28 @@ Alternatively, one can use basic argmax of weighted average with option `-r`/`--
 Alternatively, the functions defined in `pesto/predict.py` can directly be called within another Python code.
 In particular, function `predict_from_files` is the one that is directly called by the CLI.
 
+#### Basic usage
+
+```python
+import torchaudio
+import pesto
+
+# predict the pitch of your audio tensors directly within your own Python code
+x, sr = torchaudio.load("my_file.wav")
+timesteps, pitch, confidence, activations = pesto.predict(x, sr)
+
+# you can also predict pitches from audio files directly
+pesto.predict_from_files(["example1.wav", "example2.wav", "example3.wav"], step_size=10., export_format=["csv"])
+```
+
+#### Advanced usage
+
+If not provided,  `predict` and `predict_from_files`  will first load the CQT kernels and the model before performing 
+any pitch estimation. If you want to process a significant number of files, calling `predict` several times will then 
+re-initialize the same model for each tensor.
+
+To avoid this time-consuming step, 
+
 ## Benchmark
 
 On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.

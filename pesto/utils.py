@@ -42,7 +42,7 @@ def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor
     if reduction == "mean":
         return torch.mv(activations, all_pitches)
 
-    if reduction == "alwa":  # argmax-local weighted averaging, see https://github.dev/marl/crepe
+    if reduction == "alwa":  # argmax-local weighted averaging, see https://github.com/marl/crepe
         center_bin = activations.argmax(dim=1, keepdim=True)
         window = torch.arange(-bps+1, bps, device=activations.device)
         indices = window + center_bin

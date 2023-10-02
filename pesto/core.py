@@ -71,11 +71,11 @@ def predict(
 
 
 def predict_from_files(
-        audio_files: Sequence[str],
+        audio_files: Union[str, Sequence[str]],
         model_name: str = "mir-1k",
         output: Optional[str] = None,
         step_size: float = 10.,
-        reduction: str = "argmax",
+        reduction: str = "alwa",
         export_format: Sequence[str] = ("csv",),
         no_convert_to_freq: bool = False,
         gpu: int = -1
@@ -95,6 +95,9 @@ def predict_from_files(
     Returns:
         Pitch predictions, see `predict` for more details.
     """
+    if isinstance(audio_files, str):
+        audio_files = [audio_files]
+
     if gpu >= 0 and not torch.cuda.is_available():
         warnings.warn("You're trying to use the GPU but no GPU has been found. Using CPU instead...")
         gpu = -1

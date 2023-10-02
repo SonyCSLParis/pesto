@@ -39,8 +39,8 @@ def predict(
 
     if data_preprocessor is None:
         assert step_size is not None, \
-            "If you don't use a predefined data preprocessor, you must at least indicate a step size."
-        data_preprocessor = load_dataprocessor(step_size=step_size, device=x.device)
+            "If you don't use a predefined data preprocessor, you must at least indicate a step size (in milliseconds)"
+        data_preprocessor = load_dataprocessor(step_size=step_size / 1000., device=x.device)
 
     # If the sampling rate has changed, change the sampling rate accordingly
     # It will automatically recompute the CQT kernels if needed
@@ -71,11 +71,11 @@ def predict(
 
 
 def predict_from_files(
-        audio_files: Sequence[str],
+        audio_files: Union[str, Sequence[str]],
         model_name: str = "mir-1k",
         output: Optional[str] = None,
         step_size: float = 10.,
-        reduction: str = "argmax",
+        reduction: str = "alwa",
         export_format: Sequence[str] = ("csv",),
         no_convert_to_freq: bool = False,
         gpu: int = -1
@@ -95,6 +95,9 @@ def predict_from_files(
     Returns:
         Pitch predictions, see `predict` for more details.
     """
+    if isinstance(audio_files, str):
+        audio_files = [audio_files]
+
     if gpu >= 0 and not torch.cuda.is_available():
         warnings.warn("You're trying to use the GPU but no GPU has been found. Using CPU instead...")
         gpu = -1

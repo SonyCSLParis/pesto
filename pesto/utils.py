@@ -12,7 +12,7 @@ def load_dataprocessor(step_size, device: Optional[torch.device] = None):
     return DataProcessor(step_size=step_size, device=device, **cqt_args).to(device)
 
 
-def load_model(model_name: str, device: torch.device | None = None) -> PESTOEncoder:
+def load_model(model_name: str, device: Optional[torch.device] = None) -> PESTOEncoder:
     model = PESTOEncoder(**model_args).to(device)
     model.eval()
 

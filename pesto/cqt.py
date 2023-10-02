@@ -81,7 +81,7 @@ def get_window_dispatch(window, N, fftbins=True):
 def create_cqt_kernels(
         Q,
         fs,
-        fmin,
+        fmin: float,
         n_bins=84,
         bins_per_octave=12,
         norm=1,

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='pesto',
+    name='pesto-pitch',
     version='1.0',
     description='Efficient pitch estimation with self-supervised learning',
     author='Alain Riou',
@@ -34,4 +34,5 @@ setup(
             'pesto=pesto.main:pesto',  # For the command line, executes function pesto() in pesto/main as 'pesto'
         ],
     },
+    python_requires='>=3.10',
 )

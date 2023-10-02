@@ -39,8 +39,8 @@ def predict(
 
     if data_preprocessor is None:
         assert step_size is not None, \
-            "If you don't use a predefined data preprocessor, you must at least indicate a step size."
-        data_preprocessor = load_dataprocessor(step_size=step_size, device=x.device)
+            "If you don't use a predefined data preprocessor, you must at least indicate a step size (in milliseconds)"
+        data_preprocessor = load_dataprocessor(step_size=step_size / 1000., device=x.device)
 
     # If the sampling rate has changed, change the sampling rate accordingly
     # It will automatically recompute the CQT kernels if needed

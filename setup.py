@@ -11,11 +11,11 @@ setup(
         'pesto': ['weights/*'],  # To include the .pth
     },
     install_requires=[
-        'numpy==1.21.5',
-        'tqdm==4.66.1',
-        'torch==2.0.1',
-        'torchaudio==2.0.2',
-        'nnAudio==0.3.2',
+        'numpy>=1.21.5',
+        'scipy>=1.8.1',
+        'tqdm>=4.66.1',
+        'torch>=2.0.1',
+        'torchaudio>=2.0.2'
     ],
     classifiers=[
         # 'Development Status :: 1 - Planning',

@@ -22,6 +22,5 @@ cqt_args = dict(
     fmin=fmin,
     n_bins=99*bins_per_semitone,  # maximal number of semitones when working at 16 kHz
     output_format="Complex",
-    verbose=False,
     center=True
 )

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pesto-pitch',
-    version='1.0',
+    version='1.0.4',
     description='Efficient pitch estimation with self-supervised learning',
     author='Alain Riou',
     packages=find_packages(),
@@ -27,12 +27,15 @@ setup(
         # 'Development Status :: 7 - Inactive',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',  # If licence is provided must be on the repository
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     entry_points={
         'console_scripts': [
             'pesto=pesto.main:pesto',  # For the command line, executes function pesto() in pesto/main as 'pesto'
         ],
     },
-    python_requires='>=3.10',
+    python_requires='>=3.8',
 )

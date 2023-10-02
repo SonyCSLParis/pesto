@@ -44,7 +44,6 @@ class DataProcessor(nn.Module):
         Returns:
             log-magnitude CQT, shape (
         """
-        print(self.device, x.device, self.cqt.cqt_kernels_real.device)
         # compute CQT from input waveform
         complex_cqt = torch.view_as_complex(self.cqt(x)).permute(2, 0, 1)
 

@@ -6,8 +6,8 @@ import torch
 import torchaudio
 from tqdm import tqdm
 
-from pesto.utils import load_model, load_dataprocessor, reduce_activation
-from pesto.export import export
+from .utils import load_model, load_dataprocessor, reduce_activation
+from .export import export
 
 
 @torch.inference_mode()

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from cqt import CQT
+from .cqt import CQT
 
 
 class DataProcessor(nn.Module):

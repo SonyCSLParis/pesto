@@ -1,5 +1,5 @@
-from pesto.parser import parse_args
-from pesto.predict import predict_from_files
+from .parser import parse_args
+from .predict import predict_from_files
 
 
 def pesto():

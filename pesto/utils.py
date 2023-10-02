@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import torch
 
@@ -7,8 +8,8 @@ from pesto.data import DataProcessor
 from pesto.model import PESTOEncoder
 
 
-def load_dataprocessor(device: torch.device | None = None):
-    return DataProcessor(**cqt_args).to(device)
+def load_dataprocessor(step_size, device: Optional[torch.device] = None):
+    return DataProcessor(step_size=step_size, device=device, **cqt_args).to(device)
 
 
 def load_model(model_name: str, device: torch.device | None = None) -> PESTOEncoder:

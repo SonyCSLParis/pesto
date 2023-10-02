@@ -1,42 +1,59 @@
 import os
 import warnings
-from typing import Sequence
+from typing import Optional, Sequence, Union
 
 import torch
 import torchaudio
 from tqdm import tqdm
 
-from pesto.utils import load_model, load_dataprocessor, reduce_activation
-from pesto.export import export
+from .utils import load_model, load_dataprocessor, reduce_activation
+from .export import export
 
 
+@torch.inference_mode()
 def predict(
         x: torch.Tensor,
-        model,
+        sr: Optional[int] = None,
+        model: Union[torch.nn.Module, str] = "mir-1k",
         data_preprocessor=None,
+        step_size: Optional[float] = None,
         reduction: str = "argmax",
-        sr: int = None,
-        hop_length: int = None,
         convert_to_freq: bool = False
 ):
+    r"""Main prediction function.
+
+    Args:
+        x (torch.Tensor): input audio tensor, shape (num_channels, num_samples)
+        sr (int, optional): sampling rate. If not specified, uses the current sampling rate of the model.
+        model: PESTO model. If a string is passed, it will load the model with the corresponding name.
+            Otherwise, the actual nn.Module will be used for doing predictions.
+        data_preprocessor: Module handling the data processing pipeline (waveform to CQT, cropping, etc.)
+        step_size (float, optional): step size between each CQT frame in milliseconds.
+            If the data_preprocessor is passed, its value will be used instead.
+        reduction (str):
+        convert_to_freq (bool): whether predictions should be converted to frequencies or not.
+    """
     # convert to mono
     assert x.ndim == 2, f"Audio file should have two dimensions, but found shape {x.size()}"
     x = x.mean(dim=0)
 
     if data_preprocessor is None:
-        data_preprocessor = load_dataprocessor(device=x.device)
+        assert step_size is not None, \
+            "If you don't use a predefined data preprocessor, you must at least indicate a step size."
+        data_preprocessor = load_dataprocessor(step_size=step_size, device=x.device)
+
+    # If the sampling rate has changed, change the sampling rate accordingly
+    # It will automatically recompute the CQT kernels if needed
+    data_preprocessor.sampling_rate = sr
 
     if isinstance(model, str):
         model = load_model(model, device=x.device)
-        assert sr and hop_length, \
-            "You must specify the sampling rate and hop length when calling directly `pesto.predict`"
-        data_preprocessor.init_cqt_layer(sr=sr, hop_length=hop_length, device=x.device)
 
     # apply model
     cqt = data_preprocessor(x)
     activations = model(cqt)
 
-    # shift activations as it should
+    # shift activations as it should (PESTO predicts pitches up to an additive constant)
     activations = activations.roll(model.abs_shift.cpu().item(), dims=1)
 
     # convert model predictions to pitch values
@@ -53,11 +70,10 @@ def predict(
     return timesteps, pitch, confidence, activations
 
 
-@torch.inference_mode()
 def predict_from_files(
         audio_files: Sequence[str],
-        model_name: str,
-        output: str | None = None,
+        model_name: str = "mir-1k",
+        output: Optional[str] = None,
         step_size: float = 10.,
         reduction: str = "argmax",
         export_format: Sequence[str] = ("csv",),
@@ -85,8 +101,7 @@ def predict_from_files(
     device = torch.device(f"cuda:{gpu:d}" if gpu >= 0 else "cpu")
 
     # define data preprocessing
-    data_preprocessor = load_dataprocessor(device=device)
-    current_sr = None
+    data_preprocessor = load_dataprocessor(step_size / 1000., device=device)
 
     # define model
     model = load_model(model_name, device=device)
@@ -105,17 +120,12 @@ def predict_from_files(
 
         x = x.to(device)
 
-        # if the sampling rate has changed, recompute the CQT kernels
-        if sr != current_sr:
-            hop_length = int(step_size * sr / 1000 + 0.5)
-            data_preprocessor.init_cqt_layer(sr, hop_length, device)
-            current_sr = sr
-
         # compute the predictions
         predictions = predict(
             x,
-            model,
-            data_preprocessor,
+            sr,
+            model=model,
+            data_preprocessor=data_preprocessor,
             reduction=reduction,
             convert_to_freq=not no_convert_to_freq
         )

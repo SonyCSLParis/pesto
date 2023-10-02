@@ -109,19 +109,38 @@ import pesto
 
 # predict the pitch of your audio tensors directly within your own Python code
 x, sr = torchaudio.load("my_file.wav")
-timesteps, pitch, confidence, activations = pesto.predict(x, sr)
+timesteps, pitch, confidence, activations = pesto.predict(x, sr, step_size=10.)
 
 # you can also predict pitches from audio files directly
-pesto.predict_from_files(["example1.wav", "example2.wav", "example3.wav"], step_size=10., export_format=["csv"])
+pesto.predict_from_files(["example1.wav", "example2.mp3", "example3.ogg"], step_size=10., export_format=["csv"])
 ```
 
 #### Advanced usage
 
-If not provided,  `predict` and `predict_from_files`  will first load the CQT kernels and the model before performing 
+If not provided,  `pesto.predict` will first load the CQT kernels and the model before performing 
 any pitch estimation. If you want to process a significant number of files, calling `predict` several times will then 
 re-initialize the same model for each tensor.
 
-To avoid this time-consuming step, 
+To avoid this time-consuming step, one can manually instantiate  the model   and data processor, then pass them directly 
+as args to the `predict` function. To do so, one has to use the underlying methods from `pesto.utils`:
+```python
+import torch
+
+from pesto import predict
+from pesto.utils import load_model, load_dataprocessor
+
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model = load_model("mir-1k", device=device)
+data_processor = load_dataprocessor(step_size=0.01, device=device)
+
+for x, sr in ...:
+    data_processor.sampling_rate = sr  # The data_processor handles waveform->CQT conversion so it must know the sampling rate
+    predictions = predict(x, sr, model=model, data_processor=data_processor)
+    ...
+```
+Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
+once so you don't have to bother with that in general.
 
 ## Benchmark
 

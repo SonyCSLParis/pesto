@@ -3,6 +3,7 @@ Due to conflicts between some versions of NumPy and nnAudio, we use the implemen
 to the requirements of this project. Compared to the original implementation, some minor modifications have been done
 in the code, however the behaviour remains the same.
 """
+from typing import Optional
 
 import numpy as np
 import warnings
@@ -85,7 +86,7 @@ def create_cqt_kernels(
         bins_per_octave=12,
         norm=1,
         window="hann",
-        fmax=None,
+        fmax: Optional[float] = None,
         topbin_check=True,
         gamma=0,
         pad_fft=True
@@ -93,17 +94,13 @@ def create_cqt_kernels(
     """
     Automatically create CQT kernels in time domain
     """
-
-    fftLen = 2 ** nextpow2(np.ceil(Q * fs / fmin))
-    # minWin = 2**nextpow2(np.ceil(Q * fs / fmax))
-
     if (fmax is not None) and (n_bins is None):
         n_bins = np.ceil(
             bins_per_octave * np.log2(fmax / fmin)
         )  # Calculate the number of bins
-        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.float(bins_per_octave))
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
 
-    elif (fmax == None) and (n_bins != None):
+    elif (fmax is None) and (n_bins is not None):
         freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
 
     else:
@@ -111,9 +108,9 @@ def create_cqt_kernels(
         n_bins = np.ceil(
             bins_per_octave * np.log2(fmax / fmin)
         )  # Calculate the number of bins
-        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.float(bins_per_octave))
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
 
-    if np.max(freqs) > fs / 2 and topbin_check == True:
+    if np.max(freqs) > fs / 2 and topbin_check:
         raise ValueError(
             "The top bin {}Hz has exceeded the Nyquist frequency, \
                           please reduce the n_bins".format(
@@ -246,20 +243,20 @@ class CQT(nn.Module):
     """
 
     def __init__(
-        self,
-        sr=22050,
-        hop_length=512,
-        fmin=32.70,
-        fmax=None,
-        n_bins=84,
-        bins_per_octave=12,
-        filter_scale=1,
-        norm=1,
-        window="hann",
-        center=True,
-        pad_mode="reflect",
-        trainable=False,
-        output_format="Magnitude"
+            self,
+            sr=22050,
+            hop_length=512,
+            fmin=32.70,
+            fmax=None,
+            n_bins=84,
+            bins_per_octave=12,
+            filter_scale=1,
+            norm=1,
+            window="hann",
+            center=True,
+            pad_mode="reflect",
+            trainable=False,
+            output_format="Magnitude"
     ):
 
         super().__init__()

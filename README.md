@@ -2,26 +2,25 @@
  
 **tl;dr**: Fast and powerful pitch estimator based on machine learning
 
+This code is the implementation of the [PESTO paper](https://arxiv.org/abs/2309.02265),
+that has been accepted at [ISMIR 2023](https://ismir2023.ismir.net/).
+
 **Disclaimer:** This repository contains minimal code and should be used for inference only.
 If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (work in progress).
-
 
 ## Installation
 
 ```shell
 pip install pesto
 ```
-
-### Common issues
-
-- When 
+That's it!
 
 ### Dependencies
 
 This repository is implemented in [PyTorch](https://pytorch.org/) and has the following additional dependencies:
-- `matplotlib` and `numpy` for basic I/O and plotting operations
+- `numpy` for basic I/O  operations
 - [torchaudio](https://pytorch.org/audio/stable/) for audio loading
-- [nnAudio](https://github.com/KinWaiCheuk/nnAudio) for computing the Constant-Q Transform (CQT)
+- `matplotlib` for exporting pitch predictions as images (optional)
 
 ## Usage
 
@@ -59,9 +58,8 @@ This structure is voluntarily the same as in [CREPE](https://github.com/marl/cre
 Alternatively, one can choose to save timesteps, pitch, confidence and activation outputs as a `.npz` file.
 
 Finally, you can also visualize the pitch predictions by exporting them as a `png` file. Here is an example:
-<p align="center">
-  <img src="https://github.com/SonyCSLParis/pesto/blob/master/examples/example.f0.png?raw=true">
-</p>
+![example f0](https://github.com/SonyCSLParis/pesto/assets/36546630/2ad82c86-136a-4125-bf47-ea1b93408022)
+
 Multiple formats can be specified after the `-e` option.
 
 #### Batch processing
@@ -82,10 +80,7 @@ Additionally, audio files can have any sampling rate, no resampling is required.
 
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
-
-<p align="center">
-  <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/alwa.png?raw=true">
-</p>
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/7d06bf85-585c-401f-a3c2-f2fab90dd1a7)
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 
@@ -142,19 +137,66 @@ for x, sr in ...:
 Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
 once so you don't have to bother with that in general.
 
-## Benchmark
+## Performances
 
 On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
-Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge dataset containing MIR-1K and MDB-stem-synth, among others.
+Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge 
+dataset containing MIR-1K and MDB-stem-synth, among others.
 
-<p align="center">
-  <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/results.png?raw=true">
-</p>
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/2fd0e46a-f9ac-4a7e-beb7-95b6f8f030fb)
 
-## Speed
 
-TODO
+## Speed benchmark
+
+PESTO is a very lightweight model, and is therefore very fast at inference time.
+As CQT frames are processed independently, the actual speed of the pitch estimation process mostly depends on the 
+granularity of the predictions, that can be controlled with the `--step_size` parameter (10ms by default).
+
+Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the same machine.
+![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/c5ca72be-1c8a-4cbd-bc96-80fbe0d1096f)
+
+- Audio file: `wav` format, 2m51s
+- Hardware: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores
+
+Note that the *y*-axis is in log-scale: with a step size of 10ms (the default),
+PESTO would perform pitch estimation of the file in 13 seconds (~12 times faster than real-time) while CREPE would take 12 minutes!
+It is therefore more suited to applications that need very fast pitch estimation without relying on GPU resources.
 
 ## Cite
 
-If you want to cite this work, 
+If you want to use this work, please cite:
+```
+@inproceedings{PESTO,
+    author = {Riou, Alain and Lattner, Stefan and Hadjeres, Gaëtan and Peeters, Geoffroy},
+    booktitle = {Proceedings of the 24th International Society for Music Information Retrieval Conference, ISMIR 2023},
+    publisher = {International Society for Music Information Retrieval},
+    title = {PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective},
+    year = {2023}
+}
+```
+
+## Credits
+
+- [nnAudio](https://github.com/KinWaiCheuk/nnAudio) for the original CQT implementation
+- [multipitch-architectures](https://github.com/christofw/multipitch_architectures) for the original architecture of the model
+
+```
+@ARTICLE{9174990,
+    author={K. W. {Cheuk} and H. {Anderson} and K. {Agres} and D. {Herremans}},
+    journal={IEEE Access}, 
+    title={nnAudio: An on-the-Fly GPU Audio to Spectrogram Conversion Toolbox Using 1D Convolutional Neural Networks}, 
+    year={2020},
+    volume={8},
+    number={},
+    pages={161981-162003},
+    doi={10.1109/ACCESS.2020.3019084}}
+@ARTICLE{9865174,
+    author={Weiß, Christof and Peeters, Geoffroy},
+    journal={IEEE/ACM Transactions on Audio, Speech, and Language Processing}, 
+    title={Comparing Deep Models and Evaluation Strategies for Multi-Pitch Estimation in Music Recordings}, 
+    year={2022},
+    volume={30},
+    number={},
+    pages={2814-2827},
+    doi={10.1109/TASLP.2022.3200547}}
+```

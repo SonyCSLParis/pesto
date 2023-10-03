@@ -1,18 +1,19 @@
 import os
+from typing import Optional
 
 import torch
 
-import config
-from data import DataProcessor
-from model import PESTOEncoder
+from pesto.config import model_args, cqt_args, bins_per_semitone
+from pesto.data import DataProcessor
+from pesto.model import PESTOEncoder
 
 
-def load_dataprocessor(device: torch.device | None = None):
-    return DataProcessor(**config.cqt_args).to(device)
+def load_dataprocessor(step_size, device: Optional[torch.device] = None):
+    return DataProcessor(step_size=step_size, device=device, **cqt_args).to(device)
 
 
-def load_model(model_name: str, device: torch.device | None = None) -> PESTOEncoder:
-    model = PESTOEncoder(**config.model_args).to(device)
+def load_model(model_name: str, device: Optional[torch.device] = None) -> PESTOEncoder:
+    model = PESTOEncoder(**model_args).to(device)
     model.eval()
 
     model_path = os.path.join(os.path.dirname(__file__), "weights", model_name + ".pth")
@@ -21,28 +22,29 @@ def load_model(model_name: str, device: torch.device | None = None) -> PESTOEnco
     return model
 
 
-def reduce_activation(activations: torch.Tensor, reduction: str):
-    r"""
+def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor:
+    r"""Computes the pitch predictions from the activation outputs of the encoder.
+    Pitch predictions are returned in semitones, NOT in frequencies.
 
     Args:
         activations: tensor of probability activations, shape (num_frames, num_bins)
         reduction:
 
     Returns:
-
+        torch.Tensor: pitch predictions, shape (num_frames,)
     """
-    bps = config.bins_per_semitone
+    bps = bins_per_semitone
     if reduction == "argmax":
         pred = activations.argmax(dim=1)
         return pred.float() / bps
 
-    all_pitches = (torch.arange(activations.size(1), dtype=torch.float)) / bps
+    all_pitches = (torch.arange(activations.size(1), dtype=torch.float, device=activations.device)) / bps
     if reduction == "mean":
-        return torch.mm(activations, all_pitches)
+        return torch.mv(activations, all_pitches)
 
-    if reduction == "alwa":  # argmax-local weighted averaging, see https://github.dev/marl/crepe
+    if reduction == "alwa":  # argmax-local weighted averaging, see https://github.com/marl/crepe
         center_bin = activations.argmax(dim=1, keepdim=True)
-        window = torch.arange(-bps+1, bps)
+        window = torch.arange(-bps+1, bps, device=activations.device)
         indices = window + center_bin
         cropped_activations = activations.gather(1, indices)
         cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(1, indices)

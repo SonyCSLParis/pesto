@@ -1,5 +1,4 @@
 from functools import partial
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -30,8 +29,7 @@ class PESTOEncoder(nn.Module):
     not over time (in order to work with variable length input).
     Outputs one channel with sigmoid activation.
 
-    Args (Defaults: BasicCNN by Johannes Zeitler but with 6 input channels):
-        n_chan_input:     Number of input channels (harmonics in HCQT)
+    Args (Defaults: BasicCNN by Johannes Zeitler but with 1 input channel):
         n_chan_layers:    Number of channels in the hidden layers (list)
         n_prefilt_layers: Number of repetitions of the prefiltering layer
         residual:         If True, use residual connections for prefiltering (default: False)
@@ -43,38 +41,27 @@ class PESTOEncoder(nn.Module):
 
     def __init__(
             self,
-            n_chan_input=6,
             n_chan_layers=(20, 20, 10, 1),
             n_prefilt_layers=1,
             residual=False,
             n_bins_in=216,
             output_dim=128,
-            num_output_layers: int = 1,
-            activation_fn: str = "leaky",
-            a_lrelu=0.3,
+            num_output_layers: int = 1
     ):
         super(PESTOEncoder, self).__init__()
 
-        if activation_fn == "relu":
-            activation_layer = nn.ReLU
-        elif activation_fn == "silu":
-            activation_layer = nn.SiLU
-        elif activation_fn == "leaky":
-            activation_layer = partial(nn.LeakyReLU, negative_slope=a_lrelu)
-        else:
-            raise ValueError
+        activation_layer = partial(nn.LeakyReLU, negative_slope=0.3)
 
-        n_in = n_chan_input
         n_ch = n_chan_layers
         if len(n_ch) < 5:
             n_ch.append(1)
 
         # Layer normalization over frequency and channels (harmonics of HCQT)
-        self.layernorm = nn.LayerNorm(normalized_shape=[n_in, n_bins_in])
+        self.layernorm = nn.LayerNorm(normalized_shape=[1, n_bins_in])
 
         # Prefiltering
         self.conv1 = nn.Sequential(
-            nn.Conv1d(in_channels=n_in, out_channels=n_ch[0], kernel_size=15, padding=7, stride=1),
+            nn.Conv1d(in_channels=1, out_channels=n_ch[0], kernel_size=15, padding=7, stride=1),
             activation_layer()
         )
         self.n_prefilt_layers = n_prefilt_layers
@@ -147,5 +134,5 @@ class PESTOEncoder(nn.Module):
         y_pred = self.conv4(conv3_lrelu)
         y_pred = self.flatten(y_pred)
         y_pred = self.pre_fc(y_pred)
-        y_pred = self.fc(y_pred)  # WARNING: issues when batch size = 1
+        y_pred = self.fc(y_pred)
         return self.final_norm(y_pred)

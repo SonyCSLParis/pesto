@@ -1,11 +1,20 @@
 import torch
 import torch.nn as nn
 
-from nnAudio.features.cqt import CQT
+from .cqt import CQT
 
 
 class DataProcessor(nn.Module):
-    def __init__(self, bins_per_semitone: int = 3, **cqt_kwargs):
+    r"""
+
+    Args:
+        step_size (float): step size between consecutive CQT frames (in SECONDS)
+    """
+    def __init__(self,
+                 step_size: float,
+                 bins_per_semitone: int = 3,
+                 device: torch.device = torch.device("cpu"),
+                 **cqt_kwargs):
         super(DataProcessor, self).__init__()
         self.bins_per_semitone = bins_per_semitone
 
@@ -13,7 +22,6 @@ class DataProcessor(nn.Module):
         self.cqt_kwargs = cqt_kwargs
         self.cqt_kwargs["bins_per_octave"] = 12 * bins_per_semitone
         self.cqt = None
-        self.step_size = None
 
         # log-magnitude
         self.eps = torch.finfo(torch.float32).eps
@@ -21,6 +29,11 @@ class DataProcessor(nn.Module):
         # cropping
         self.lowest_bin = int(11 * self.bins_per_semitone / 2 + 0.5)
         self.highest_bin = self.lowest_bin + 88 * self.bins_per_semitone
+
+        # handling different sampling rates
+        self._sampling_rate = None
+        self.step_size = step_size
+        self.device = device
 
     def forward(self, x: torch.Tensor):
         r"""
@@ -40,6 +53,18 @@ class DataProcessor(nn.Module):
         log_cqt = complex_cqt.abs().clamp_(min=self.eps).log10_().mul_(20)
         return log_cqt
 
-    def init_cqt_layer(self, sr: int, hop_length: int, device):
-        self.step_size = hop_length / sr
-        self.cqt = CQT(sr=sr, hop_length=hop_length, **self.cqt_kwargs).to(device)
+    def _init_cqt_layer(self, sr: int, hop_length: int):
+        self.cqt = CQT(sr=sr, hop_length=hop_length, **self.cqt_kwargs).to(self.device)
+
+    @property
+    def sampling_rate(self) -> int:
+        return self._sampling_rate
+
+    @sampling_rate.setter
+    def sampling_rate(self, sr: int):
+        if sr == self._sampling_rate:
+            return
+
+        hop_length = int(self.step_size * sr + 0.5)
+        self._init_cqt_layer(sr, hop_length)
+        self._sampling_rate = sr

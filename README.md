@@ -3,7 +3,7 @@
 **tl;dr**: Fast and powerful pitch estimator based on machine learning
 
 **Disclaimer:** This repository contains minimal code and should be used for inference only.
-If you want full implementation details or want to use PESTO for research purposes, take a look at [this repository](https://github.com/aRI0U/pesto-full).
+If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (work in progress).
 
 
 ## Installation
@@ -11,7 +11,10 @@ If you want full implementation details or want to use PESTO for research purpos
 ```shell
 pip install pesto
 ```
-*not possible yet*
+
+### Common issues
+
+- When 
 
 ### Dependencies
 
@@ -92,16 +95,66 @@ Alternatively, one can use basic argmax of weighted average with option `-r`/`--
 - You can use `-F` option to return directly pitch predictions in semitones instead of frequency.
 - If you have access to a GPU, inference speed can be further improved with option `--gpu <gpu_id>`. `--gpu -1` (the default) corresponds to CPU.
 
+
+### Python API
+
+Alternatively, the functions defined in `pesto/predict.py` can directly be called within another Python code.
+In particular, function `predict_from_files` is the one that is directly called by the CLI.
+
+#### Basic usage
+
+```python
+import torchaudio
+import pesto
+
+# predict the pitch of your audio tensors directly within your own Python code
+x, sr = torchaudio.load("my_file.wav")
+timesteps, pitch, confidence, activations = pesto.predict(x, sr, step_size=10.)
+
+# you can also predict pitches from audio files directly
+pesto.predict_from_files(["example1.wav", "example2.mp3", "example3.ogg"], step_size=10., export_format=["csv"])
+```
+
+#### Advanced usage
+
+If not provided,  `pesto.predict` will first load the CQT kernels and the model before performing 
+any pitch estimation. If you want to process a significant number of files, calling `predict` several times will then 
+re-initialize the same model for each tensor.
+
+To avoid this time-consuming step, one can manually instantiate  the model   and data processor, then pass them directly 
+as args to the `predict` function. To do so, one has to use the underlying methods from `pesto.utils`:
+```python
+import torch
+
+from pesto import predict
+from pesto.utils import load_model, load_dataprocessor
+
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model = load_model("mir-1k", device=device)
+data_processor = load_dataprocessor(step_size=0.01, device=device)
+
+for x, sr in ...:
+    data_processor.sampling_rate = sr  # The data_processor handles waveform->CQT conversion so it must know the sampling rate
+    predictions = predict(x, sr, model=model, data_processor=data_processor)
+    ...
+```
+Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
+once so you don't have to bother with that in general.
+
 ## Benchmark
 
-TODO
+On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
+Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge dataset containing MIR-1K and MDB-stem-synth, among others.
+
+<p align="center">
+  <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/results.png?raw=true">
+</p>
 
 ## Speed
 
 TODO
 
-## TODO
+## Cite
 
-- add licence
-- add confidence
-- fill sections in README
+If you want to cite this work, 

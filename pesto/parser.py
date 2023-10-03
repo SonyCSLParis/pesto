@@ -9,7 +9,7 @@ def parse_args():
                         help='choice of the model')
     parser.add_argument('-o', '--output', metavar='DIR', type=str, default=None,
                         help='directory to save the output predictions')
-    parser.add_argument('-e', '--export_format', metavar='FMT', type=str, choices=["csv", "npz", "png"], nargs='+')
+    parser.add_argument('-e', '--export_format', metavar='FMT', type=str, default=["csv"], choices=["csv", "npz", "png"], nargs='+')
     parser.add_argument('-r', '--reduction', type=str, default='alwa', choices=["alwa", "argmax", "mean"],
                         help='how to predict pitch from output probability distributions')
     parser.add_argument('-s', '--step_size', type=float, default=10.,

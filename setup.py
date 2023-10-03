@@ -1,21 +1,41 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='PESTO',
-    version='1.0',
+    name='pesto-pitch',
+    version='1.0.4',
     description='Efficient pitch estimation with self-supervised learning',
     author='Alain Riou',
-    author_email='alain',
-    packages=['PESTO'],
-    install_requires=['numpy', 'matplotlib', 'torch', 'torchaudio'],
-    classifiers=[  # TODO: no idea what it means, check that
+    packages=find_packages(),
+    include_package_data=True,
+    package_data={
+        'pesto': ['weights/*'],  # To include the .pth
+    },
+    install_requires=[
+        'numpy>=1.21.5',
+        'scipy>=1.8.1',
+        'tqdm>=4.66.1',
+        'torch>=2.0.1',
+        'torchaudio>=2.0.2'
+    ],
+    classifiers=[
+        # 'Development Status :: 1 - Planning',
+        # 'Development Status :: 2 - Pre-Alpha',
+        # 'Development Status :: 3 - Alpha',
         'Development Status :: 4 - Beta',
+        # 'Development Status :: 5 - Production/Stable',
+        # 'Development Status :: 6 - Mature',
+        # 'Development Status :: 7 - Inactive',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
+        'License :: OSI Approved :: MIT License',  # If licence is provided must be on the repository
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
+    entry_points={
+        'console_scripts': [
+            'pesto=pesto.main:pesto',  # For the command line, executes function pesto() in pesto/main as 'pesto'
+        ],
+    },
+    python_requires='>=3.8',
 )

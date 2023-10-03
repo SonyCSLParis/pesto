@@ -1,5 +1,5 @@
 # PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective
-
+ 
 **tl;dr**: Fast and powerful pitch estimator based on machine learning
 
 **Disclaimer:** This repository contains minimal code and should be used for inference only.

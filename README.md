@@ -2,26 +2,25 @@
 
 **tl;dr**: Fast and powerful pitch estimator based on machine learning
 
+This code is the implementation of the [PESTO paper](https://arxiv.org/abs/2309.02265),
+that has been accepted at [ISMIR 2023](https://ismir2023.ismir.net/).
+
 **Disclaimer:** This repository contains minimal code and should be used for inference only.
 If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (work in progress).
-
 
 ## Installation
 
 ```shell
 pip install pesto
 ```
-
-### Common issues
-
-- When 
+That's it!
 
 ### Dependencies
 
 This repository is implemented in [PyTorch](https://pytorch.org/) and has the following additional dependencies:
-- `matplotlib` and `numpy` for basic I/O and plotting operations
+- `numpy` for basic I/O  operations
 - [torchaudio](https://pytorch.org/audio/stable/) for audio loading
-- [nnAudio](https://github.com/KinWaiCheuk/nnAudio) for computing the Constant-Q Transform (CQT)
+- `matplotlib` for exporting pitch predictions as images (optional)
 
 ## Usage
 
@@ -171,13 +170,19 @@ It is therefore more suited to applications that need very fast pitch estimation
 
 If you want to use this work, please cite:
 ```
-TODO
+@inproceedings{PESTO,
+    author = {Riou, Alain and Lattner, Stefan and Hadjeres, Gaëtan and Peeters, Geoffroy},
+    booktitle = {Proceedings of the 24th International Society for Music Information Retrieval Conference, ISMIR 2023},
+    publisher = {International Society for Music Information Retrieval},
+    title = {PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective},
+    year = {2023}
+}
 ```
 
 ## Credits
 
-- [multipitch-architectures](https://github.com/christofw/multipitch_architectures) for the original architecture of the model
 - [nnAudio](https://github.com/KinWaiCheuk/nnAudio) for the original CQT implementation
+- [multipitch-architectures](https://github.com/christofw/multipitch_architectures) for the original architecture of the model
 
 ```
 @ARTICLE{9174990,
@@ -189,13 +194,13 @@ TODO
     number={},
     pages={161981-162003},
     doi={10.1109/ACCESS.2020.3019084}}
-@ARTICLE{9174990,
-    author={K. W. {Cheuk} and H. {Anderson} and K. {Agres} and D. {Herremans}},
-    journal={IEEE Access}, 
-    title={nnAudio: An on-the-Fly GPU Audio to Spectrogram Conversion Toolbox Using 1D Convolutional Neural Networks}, 
-    year={2020},
-    volume={8},
+@ARTICLE{9865174,
+    author={Weiß, Christof and Peeters, Geoffroy},
+    journal={IEEE/ACM Transactions on Audio, Speech, and Language Processing}, 
+    title={Comparing Deep Models and Evaluation Strategies for Multi-Pitch Estimation in Music Recordings}, 
+    year={2022},
+    volume={30},
     number={},
-    pages={161981-162003},
-    doi={10.1109/ACCESS.2020.3019084}}
+    pages={2814-2827},
+    doi={10.1109/TASLP.2022.3200547}}
 ```

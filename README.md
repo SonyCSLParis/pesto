@@ -80,8 +80,7 @@ Additionally, audio files can have any sampling rate, no resampling is required.
 
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
-
-![image](https://github.com/SonyCSLParis/pesto/assets/36546630/38a6f405-f591-4960-81d3-6fcc551d91e8)
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/7d06bf85-585c-401f-a3c2-f2fab90dd1a7)
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 

@@ -142,19 +142,60 @@ for x, sr in ...:
 Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
 once so you don't have to bother with that in general.
 
-## Benchmark
+## Performances
 
 On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
-Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge dataset containing MIR-1K and MDB-stem-synth, among others.
+Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge 
+dataset containing MIR-1K and MDB-stem-synth, among others.
 
 <p align="center">
   <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/results.png?raw=true">
 </p>
 
-## Speed
+## Speed benchmark
 
-TODO
+PESTO is a very lightweight model, and is therefore very fast at inference time.
+As CQT frames are processed independently, the actual speed of the pitch estimation process mostly depends on the 
+granularity of the predictions, that can be controlled with the `--step_size` parameter (10ms by default).
+
+Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the same machine.
+
+- Audio file: `wav` format, 2m51s
+- Hardware: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores
+
+Note that the *y*-axis is in log-scale: with a step size of 10ms (the default),
+PESTO would perform pitch estimation of the file in 13 seconds (~12 times faster than real-time) while CREPE would take 12 minutes!
+It is therefore more suited to applications that need very fast pitch estimation without relying on GPU resources.
 
 ## Cite
 
-If you want to cite this work, 
+If you want to use this work, please cite:
+```
+TODO
+```
+
+## Credits
+
+- [multipitch-architectures](https://github.com/christofw/multipitch_architectures) for the original architecture of the model
+- [nnAudio](https://github.com/KinWaiCheuk/nnAudio) for the original CQT implementation
+
+```
+@ARTICLE{9174990,
+    author={K. W. {Cheuk} and H. {Anderson} and K. {Agres} and D. {Herremans}},
+    journal={IEEE Access}, 
+    title={nnAudio: An on-the-Fly GPU Audio to Spectrogram Conversion Toolbox Using 1D Convolutional Neural Networks}, 
+    year={2020},
+    volume={8},
+    number={},
+    pages={161981-162003},
+    doi={10.1109/ACCESS.2020.3019084}}
+@ARTICLE{9174990,
+    author={K. W. {Cheuk} and H. {Anderson} and K. {Agres} and D. {Herremans}},
+    journal={IEEE Access}, 
+    title={nnAudio: An on-the-Fly GPU Audio to Spectrogram Conversion Toolbox Using 1D Convolutional Neural Networks}, 
+    year={2020},
+    volume={8},
+    number={},
+    pages={161981-162003},
+    doi={10.1109/ACCESS.2020.3019084}}
+```

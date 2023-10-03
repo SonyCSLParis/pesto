@@ -58,9 +58,8 @@ This structure is voluntarily the same as in [CREPE](https://github.com/marl/cre
 Alternatively, one can choose to save timesteps, pitch, confidence and activation outputs as a `.npz` file.
 
 Finally, you can also visualize the pitch predictions by exporting them as a `png` file. Here is an example:
-<p align="center">
-  <img src="https://github.com/SonyCSLParis/pesto/blob/master/examples/example.f0.png?raw=true">
-</p>
+![example f0](https://github.com/SonyCSLParis/pesto/assets/36546630/2ad82c86-136a-4125-bf47-ea1b93408022)
+
 Multiple formats can be specified after the `-e` option.
 
 #### Batch processing
@@ -82,9 +81,7 @@ Additionally, audio files can have any sampling rate, no resampling is required.
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
 
-<p align="center">
-  <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/alwa.png?raw=true">
-</p>
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/38a6f405-f591-4960-81d3-6fcc551d91e8)
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 
@@ -147,9 +144,8 @@ On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised ba
 Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge 
 dataset containing MIR-1K and MDB-stem-synth, among others.
 
-<p align="center">
-  <img width="360" src="https://github.com/SonyCSLParis/pesto/blob/master/images/results.png?raw=true">
-</p>
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/2fd0e46a-f9ac-4a7e-beb7-95b6f8f030fb)
+
 
 ## Speed benchmark
 
@@ -158,6 +154,7 @@ As CQT frames are processed independently, the actual speed of the pitch estimat
 granularity of the predictions, that can be controlled with the `--step_size` parameter (10ms by default).
 
 Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the same machine.
+![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/c5ca72be-1c8a-4cbd-bc96-80fbe0d1096f)
 
 - Audio file: `wav` format, 2m51s
 - Hardware: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores

@@ -13,8 +13,6 @@ class DataProcessor(nn.Module):
         self.cqt_kwargs = cqt_kwargs
         self.cqt_kwargs["bins_per_octave"] = 12 * bins_per_semitone
         self.cqt = None
-
-        self.sr = None
         self.step_size = None
 
         # log-magnitude

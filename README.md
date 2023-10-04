@@ -27,7 +27,7 @@ This repository is implemented in [PyTorch](https://pytorch.org/) and has the fo
 ### Command-line interface
 
 This package includes a CLI as well as pretrained models.
-In order to use it, type in a terminal:
+To use it, type in a terminal:
 ```shell
 pesto my_file.wav
 ```
@@ -53,11 +53,12 @@ time,frequency,confidence
 0.08,199.678,0.775208
 ...
 ```
-This structure is voluntarily the same as in [CREPE](https://github.com/marl/crepe) repo for enabling easy comparison between both methods.
+This structure is voluntarily the same as in [CREPE](https://github.com/marl/crepe) repo for easy comparison between both methods.
 
-Alternatively, one can choose to save timesteps, pitch, confidence and activation outputs as a `.npz` file.
+Alternatively, one can save timesteps, pitch, confidence and activation outputs as a `.npz` file.
 
-Finally, you can also visualize the pitch predictions by exporting them as a `png` file. Here is an example:
+Finally, you can also visualize the pitch predictions by exporting them as a `png` file (you need `matplotlib` to be installed for PNG export). Here is an example:
+
 ![example f0](https://github.com/SonyCSLParis/pesto/assets/36546630/2ad82c86-136a-4125-bf47-ea1b93408022)
 
 Multiple formats can be specified after the `-e` option.
@@ -65,7 +66,7 @@ Multiple formats can be specified after the `-e` option.
 #### Batch processing
 
 Any number of audio files can be passed in the command for convenient batch processing.
-For example, for estimating the pitch of a whole folder of MP3 files, just type:
+For example, to estimate the pitch of a whole folder of MP3 files, just type:
 ```shell
 pesto my_folder/*.mp3
 ```
@@ -73,13 +74,13 @@ pesto my_folder/*.mp3
 #### Audio format
 
 Internally, this repository uses [torchaudio](https://pytorch.org/audio/stable/backend.html) for loading audio files.
-Most audio formats should be supported, refer to torchaudio's documentation for more information. 
-Additionally, audio files can have any sampling rate, no resampling is required.
+Most audio formats should be supported; refer to torchaudio's documentation for more information. 
+Additionally, audio files can have any sampling rate; no resampling is required.
 
-#### Pitch prediction from output probability distribution
+#### Pitch prediction from the output probability distribution
 
 By default, the model returns a probability distribution over all pitch bins.
-To convert it to a proper pitch, by default we use Argmax-Local Weighted Averaging as in CREPE:
+To convert it to a proper pitch, by default, we use Argmax-Local Weighted Averaging as in CREPE:
 ![image](https://github.com/SonyCSLParis/pesto/assets/36546630/7d06bf85-585c-401f-a3c2-f2fab90dd1a7)
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
@@ -88,13 +89,13 @@ Alternatively, one can use basic argmax of weighted average with option `-r`/`--
 
 - The step size of the pitch predictions can be specified (in milliseconds) with option `-s`. Note that this number is then converted to an integer hop length for the CQT so there might be a slight difference between the step size you specify and the actual one.
 - You can use `-F` option to return directly pitch predictions in semitones instead of frequency.
-- If you have access to a GPU, inference speed can be further improved with option `--gpu <gpu_id>`. `--gpu -1` (the default) corresponds to CPU.
+- If you can access a GPU, inference speed can be further improved with option `--gpu <gpu_id>`. `--gpu -1` (the default) corresponds to CPU.
 
 
 ### Python API
 
 Alternatively, the functions defined in `pesto/predict.py` can directly be called within another Python code.
-In particular, function `predict_from_files` is the one that is directly called by the CLI.
+In particular, the function `predict_from_files` is the one that the CLI directly calls.
 
 #### Basic usage
 
@@ -106,7 +107,7 @@ import pesto
 x, sr = torchaudio.load("my_file.wav")
 timesteps, pitch, confidence, activations = pesto.predict(x, sr, step_size=10.)
 
-# you can also predict pitches from audio files directly
+# You can also predict pitches from audio files directly
 pesto.predict_from_files(["example1.wav", "example2.mp3", "example3.ogg"], step_size=10., export_format=["csv"])
 ```
 
@@ -140,20 +141,22 @@ once so you don't have to bother with that in general.
 ## Performances
 
 On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
-Its performances are close to CREPE's ones, that has 800x more parameters and was trained in a supervised way on a huge 
+Its performances are close to CREPE's, which has 800x more parameters and was trained in a supervised way on a vast 
 dataset containing MIR-1K and MDB-stem-synth, among others.
 
-![image](https://github.com/SonyCSLParis/pesto/assets/36546630/2fd0e46a-f9ac-4a7e-beb7-95b6f8f030fb)
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/9fbf15ef-7af9-4cd5-8832-f8fc24d43f25)
+
 
 
 ## Speed benchmark
 
-PESTO is a very lightweight model, and is therefore very fast at inference time.
-As CQT frames are processed independently, the actual speed of the pitch estimation process mostly depends on the 
-granularity of the predictions, that can be controlled with the `--step_size` parameter (10ms by default).
+PESTO is a very lightweight model and is therefore very fast at inference time.
+As CQT frames are processed independently, the actual speed of the pitch estimation process mainly depends on the 
+granularity of the predictions, which can be controlled with the `--step_size` parameter (10ms by default).
 
 Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the same machine.
-![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/c5ca72be-1c8a-4cbd-bc96-80fbe0d1096f)
+
+![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/8353c93d-e79f-497d-a09e-d8762e9a5cbc)
 
 - Audio file: `wav` format, 2m51s
 - Hardware: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores

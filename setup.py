@@ -2,9 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='pesto-pitch',
-    version='1.0.4',
+    version='1.0.5',
     description='Efficient pitch estimation with self-supervised learning',
     author='Alain Riou',
+    url='https://github.com/SonyCSLParis/pesto',
+    license='LGPL-3.0',
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -21,12 +23,12 @@ setup(
         # 'Development Status :: 1 - Planning',
         # 'Development Status :: 2 - Pre-Alpha',
         # 'Development Status :: 3 - Alpha',
-        'Development Status :: 4 - Beta',
-        # 'Development Status :: 5 - Production/Stable',
+        # 'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         # 'Development Status :: 6 - Mature',
         # 'Development Status :: 7 - Inactive',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',  # If licence is provided must be on the repository
+        'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',  # If licence is provided must be on the repository
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',

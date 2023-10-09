@@ -1,9 +1,18 @@
+from pathlib import Path
 from setuptools import setup, find_packages
+
+def get_readme_text():
+    root_dir = Path(__file__).parent
+    readme_path = root_dir / "README.md"
+    return readme_path.read_text()
+
 
 setup(
     name='pesto-pitch',
     version='1.0.5',
     description='Efficient pitch estimation with self-supervised learning',
+    long_description=get_readme_text(),
+    long_description_content_type='text/markdown',
     author='Alain Riou',
     url='https://github.com/SonyCSLParis/pesto',
     license='LGPL-3.0',

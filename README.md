@@ -138,6 +138,16 @@ for x, sr in ...:
 Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
 once so you don't have to bother with that in general.
 
+#### Batched pitch estimation
+
+By default, the function `pesto.predict` takes an audio waveform represented as a Tensor object of shape `(num_channels, num_samples)`.
+However, one may want to estimate the pitch of batches of (cropped) waveforms within a training pipeline, e.g. for DDSP-related applications.
+`pesto.predict` therefore accepts Tensor inputs of shape `(batch_size, num_channels, num_samples)` and returns batch-wise pitch predictions accordingly.
+
+Note that batched predictions are available only from the Python API and not from the CLI because:
+- handling audios of different lengths is annoying, I don't want to bother with that
+- when estimating pitch on
+
 ## Performances
 
 On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
@@ -164,6 +174,16 @@ Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the
 Note that the *y*-axis is in log-scale: with a step size of 10ms (the default),
 PESTO would perform pitch estimation of the file in 13 seconds (~12 times faster than real-time) while CREPE would take 12 minutes!
 It is therefore more suited to applications that need very fast pitch estimation without relying on GPU resources.
+
+## Contributing
+
+- Currently, only a single model trained on [MIR-1K](https://zenodo.org/record/3532216#.ZG0kWhlBxhE) is provided.
+Feel free to play with the architecture, training data or hyperparameters and to submit your checkpoints as PRs if you get better performances than
+the provided pretrained model. 
+- Despite PESTO being significantly faster than real-time, it is currently implemented as standard PyTorch and may be further accelerated.
+Any suggestions for improving speed are more than welcome!
+
+More generally, do not hesitate to contact me if you have ideas to improve PESTO's recipe.
 
 ## Cite
 

@@ -43,11 +43,11 @@ def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor
         return activations @ all_pitches
 
     if reduction == "alwa":  # argmax-local weighted averaging, see https://github.com/marl/crepe
-        center_bin = activations.argmax(dim=1, keepdim=True)
+        center_bin = activations.argmax(dim=-1, keepdim=True)
         window = torch.arange(-bps+1, bps, device=activations.device)
         indices = window + center_bin
-        cropped_activations = activations.gather(1, indices)
-        cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(1, indices)
-        return (cropped_activations * cropped_pitches).sum(dim=1) / cropped_activations.sum(dim=1)
+        cropped_activations = activations.gather(-1, indices)
+        cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(-1, indices)
+        return (cropped_activations * cropped_pitches).sum(dim=-1) / cropped_activations.sum(dim=-1)
 
     raise ValueError

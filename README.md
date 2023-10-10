@@ -164,7 +164,7 @@ PESTO is a very lightweight model and is therefore very fast at inference time.
 As CQT frames are processed independently, the actual speed of the pitch estimation process mainly depends on the 
 granularity of the predictions, which can be controlled with the `--step_size` parameter (10ms by default).
 
-Here is a comparison speed between CREPE and PESTO, averaged over 10 runs on the same machine.
+Here is a speed comparison between CREPE and PESTO, averaged over 10 runs on the same machine.
 
 ![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/8353c93d-e79f-497d-a09e-d8762e9a5cbc)
 
@@ -183,7 +183,7 @@ the provided pretrained model.
 - Despite PESTO being significantly faster than real-time, it is currently implemented as standard PyTorch and may be further accelerated.
 Any suggestions for improving speed are more than welcome!
 
-More generally, do not hesitate to contact me if you have ideas to improve PESTO's recipe.
+More generally, do not hesitate to contact me if you have ideas to improve PESTO's recipe!
 
 ## Cite
 

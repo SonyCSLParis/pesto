@@ -27,20 +27,20 @@ def reduce_activation(activations: torch.Tensor, reduction: str) -> torch.Tensor
     Pitch predictions are returned in semitones, NOT in frequencies.
 
     Args:
-        activations: tensor of probability activations, shape (num_frames, num_bins)
+        activations: tensor of probability activations, shape (*, num_bins)
         reduction:
 
     Returns:
-        torch.Tensor: pitch predictions, shape (num_frames,)
+        torch.Tensor: pitch predictions, shape (*,)
     """
     bps = bins_per_semitone
     if reduction == "argmax":
-        pred = activations.argmax(dim=1)
+        pred = activations.argmax(dim=-1)
         return pred.float() / bps
 
-    all_pitches = (torch.arange(activations.size(1), dtype=torch.float, device=activations.device)) / bps
+    all_pitches = (torch.arange(activations.size(-1), dtype=torch.float, device=activations.device)) / bps
     if reduction == "mean":
-        return torch.mv(activations, all_pitches)
+        return activations @ all_pitches
 
     if reduction == "alwa":  # argmax-local weighted averaging, see https://github.com/marl/crepe
         center_bin = activations.argmax(dim=1, keepdim=True)

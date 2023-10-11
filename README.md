@@ -11,7 +11,7 @@ If you want full implementation details or want to use PESTO for research purpos
 ## Installation
 
 ```shell
-pip install pesto
+pip install pesto-pitch
 ```
 That's it!
 

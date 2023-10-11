@@ -44,12 +44,16 @@ class DataProcessor(nn.Module):
         Returns:
             log-magnitude CQT, shape (
         """
-        # compute CQT from input waveform
-        complex_cqt = torch.view_as_complex(self.cqt(x)).permute(2, 0, 1)
+        # compute CQT from input waveform, and invert dims for (batch_size, time_steps, freq_bins)
+        complex_cqt = torch.view_as_complex(self.cqt(x)).transpose(1, 2)
 
         # reshape and crop borders to fit training input shape
         complex_cqt = complex_cqt[..., self.lowest_bin: self.highest_bin]
 
+        # flatten eventual batch dimensions so that batched audios can be processed in parallel
+        complex_cqt = complex_cqt.flatten(0, 1).unsqueeze(1)
+
+        # convert to dB
         log_cqt = complex_cqt.abs().clamp_(min=self.eps).log10_().mul_(20)
         return log_cqt
 

@@ -23,7 +23,8 @@ def predict(
     r"""Main prediction function.
 
     Args:
-        x (torch.Tensor): input audio tensor, shape (num_channels, num_samples)
+        x (torch.Tensor): input audio tensor,
+            shape (num_channels, num_samples) or (batch_size, num_channels, num_samples)
         sr (int, optional): sampling rate. If not specified, uses the current sampling rate of the model.
         model: PESTO model. If a string is passed, it will load the model with the corresponding name.
             Otherwise, the actual nn.Module will be used for doing predictions.
@@ -34,8 +35,9 @@ def predict(
         convert_to_freq (bool): whether predictions should be converted to frequencies or not.
     """
     # convert to mono
-    assert x.ndim == 2, f"Audio file should have two dimensions, but found shape {x.size()}"
-    x = x.mean(dim=0)
+    assert 2 <= x.ndim <= 3, f"Audio file should have two dimensions, but found shape {x.size()}"
+    batch_size = x.size(0) if x.ndim == 3 else None
+    x = x.mean(dim=-2)
 
     if data_preprocessor is None:
         assert step_size is not None, \
@@ -52,9 +54,12 @@ def predict(
     # apply model
     cqt = data_preprocessor(x)
     activations = model(cqt)
+    if batch_size:
+        total_batch_size, num_predictions = activations.size()
+        activations = activations.view(batch_size, total_batch_size // batch_size, num_predictions)
 
     # shift activations as it should (PESTO predicts pitches up to an additive constant)
-    activations = activations.roll(model.abs_shift.cpu().item(), dims=1)
+    activations = activations.roll(model.abs_shift.cpu().item(), dims=-1)
 
     # convert model predictions to pitch values
     pitch = reduce_activation(activations, reduction=reduction)
@@ -62,10 +67,11 @@ def predict(
         pitch = 440 * 2 ** ((pitch - 69) / 12)
 
     # for now, confidence is computed very naively just based on volume
-    confidence = cqt.squeeze(1).max(dim=1).values
-    confidence = (confidence - confidence.min()) / (confidence.max() - confidence.min())
+    confidence = cqt.squeeze(1).max(dim=1).values.view_as(pitch)
+    conf_min, conf_max = confidence.min(dim=-1, keepdim=True).values, confidence.max(dim=-1, keepdim=True).values
+    confidence = (confidence - conf_min) / (conf_max - conf_min)
 
-    timesteps = torch.arange(len(pitch), device=x.device) * data_preprocessor.step_size
+    timesteps = torch.arange(pitch.size(-1), device=x.device) * data_preprocessor.step_size
 
     return timesteps, pitch, confidence, activations
 

@@ -157,7 +157,6 @@ dataset containing MIR-1K and MDB-stem-synth, among others.
 ![image](https://github.com/SonyCSLParis/pesto/assets/36546630/9fbf15ef-7af9-4cd5-8832-f8fc24d43f25)
 
 
-
 ## Speed benchmark
 
 PESTO is a very lightweight model and is therefore very fast at inference time.

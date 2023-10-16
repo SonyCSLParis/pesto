@@ -119,12 +119,12 @@ re-initialize the same model for each tensor.
 
 To avoid this time-consuming step, one can manually instantiate  the model   and data processor, then pass them directly 
 as args to the `predict` function. To do so, one has to use the underlying methods from `pesto.utils`:
+
 ```python
 import torch
 
 from pesto import predict
 from pesto.utils import load_model, load_dataprocessor
-
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = load_model("mir-1k", device=device)
@@ -132,7 +132,7 @@ data_processor = load_dataprocessor(step_size=0.01, device=device)
 
 for x, sr in ...:
     data_processor.sampling_rate = sr  # The data_processor handles waveform->CQT conversion so it must know the sampling rate
-    predictions = predict(x, sr, model=model, data_processor=data_processor)
+    predictions = predict(x, sr, model=model)
     ...
 ```
 Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only

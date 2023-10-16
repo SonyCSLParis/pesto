@@ -17,6 +17,9 @@ def parse_args():
     parser.add_argument('-F', '--no_convert_to_freq', action='store_true',
                         help='if true, does not convert the predicted pitch to frequency domain and '
                              'returns predictions as semitones')
+    parser.add_argument('-c', '--num_chunks', type=int, default=1,
+                        help='number of chunks to split the input data into (default: 1). '
+                             'Can be increased to prevent out-of-memory errors.')
     parser.add_argument('--gpu', type=int, default=-1,
                         help='the index of the GPU to use, -1 for CPU')
     return parser.parse_args()

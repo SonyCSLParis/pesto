@@ -3,9 +3,9 @@ from typing import Optional
 
 import torch
 
-from pesto.config import model_args, cqt_args, bins_per_semitone
-from pesto.data import DataProcessor
-from pesto.model import PESTOEncoder
+from .config import model_args, cqt_args, bins_per_semitone
+from .data import DataProcessor
+from .model import PESTOEncoder
 
 
 def load_dataprocessor(step_size, device: Optional[torch.device] = None):

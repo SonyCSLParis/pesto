@@ -18,6 +18,7 @@ def predict(
         data_preprocessor=None,
         step_size: Optional[float] = None,
         reduction: str = "argmax",
+        num_chunks: int = 1,
         convert_to_freq: bool = False
 ):
     r"""Main prediction function.
@@ -31,7 +32,10 @@ def predict(
         data_preprocessor: Module handling the data processing pipeline (waveform to CQT, cropping, etc.)
         step_size (float, optional): step size between each CQT frame in milliseconds.
             If the data_preprocessor is passed, its value will be used instead.
-        reduction (str):
+        reduction (str): reduction method for converting activation probabilities to log-frequencies.
+        num_chunks (int): number of chunks to split the input audios in.
+            Default is 1 (all CQT frames in parallel) but it can be increased to reduce memory usage
+            and prevent out-of-memory errors.
         convert_to_freq (bool): whether predictions should be converted to frequencies or not.
     """
     # convert to mono
@@ -53,7 +57,15 @@ def predict(
 
     # apply model
     cqt = data_preprocessor(x)
-    activations = model(cqt)
+    try:
+        activations = torch.cat([
+            model(chunk) for chunk in cqt.chunk(chunks=num_chunks)
+        ])
+    except torch.cuda.OutOfMemoryError:
+        raise torch.cuda.OutOfMemoryError("Got an out-of-memory error while performing pitch estimation. "
+                                          "Please increase the number of chunks with option `-c`/`--chunks` "
+                                          "to reduce GPU memory usage.")
+
     if batch_size:
         total_batch_size, num_predictions = activations.size()
         activations = activations.view(batch_size, total_batch_size // batch_size, num_predictions)
@@ -84,6 +96,7 @@ def predict_from_files(
         reduction: str = "alwa",
         export_format: Sequence[str] = ("csv",),
         no_convert_to_freq: bool = False,
+        num_chunks: int = 1,
         gpu: int = -1
 ):
     r"""
@@ -130,14 +143,8 @@ def predict_from_files(
         x = x.to(device)
 
         # compute the predictions
-        predictions = predict(
-            x,
-            sr,
-            model=model,
-            data_preprocessor=data_preprocessor,
-            reduction=reduction,
-            convert_to_freq=not no_convert_to_freq
-        )
+        predictions = predict(x, sr, model=model, data_preprocessor=data_preprocessor, reduction=reduction,
+                              convert_to_freq=not no_convert_to_freq, num_chunks=num_chunks)
 
         output_file = file.rsplit('.', 1)[0] + "." + ("semitones" if no_convert_to_freq else "f0")
         if output is not None:

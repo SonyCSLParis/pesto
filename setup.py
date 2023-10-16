@@ -9,7 +9,7 @@ def get_readme_text():
 
 setup(
     name='pesto-pitch',
-    version='1.0.6',
+    version='1.0.0',
     description='Efficient pitch estimation with self-supervised learning',
     long_description=get_readme_text(),
     long_description_content_type='text/markdown',

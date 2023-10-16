@@ -58,7 +58,7 @@ def predict(
     # apply model
     cqt = data_preprocessor(x)
     try:
-        activations = torch.stack([
+        activations = torch.cat([
             model(chunk) for chunk in cqt.chunk(chunks=num_chunks)
         ])
     except torch.cuda.OutOfMemoryError:

@@ -56,7 +56,7 @@ class PESTOEncoder(nn.Module):
         if len(n_ch) < 5:
             n_ch.append(1)
 
-        # Layer normalization over frequency and channels (harmonics of HCQT)
+        # Layer normalization over frequency
         self.layernorm = nn.LayerNorm(normalized_shape=[1, n_bins_in])
 
         # Prefiltering

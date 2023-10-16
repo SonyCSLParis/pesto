@@ -175,6 +175,20 @@ Note that the *y*-axis is in log-scale: with a step size of 10ms (the default),
 PESTO would perform pitch estimation of the file in 13 seconds (~12 times faster than real-time) while CREPE would take 12 minutes!
 It is therefore more suited to applications that need very fast pitch estimation without relying on GPU resources.
 
+### Inference on GPU
+
+The underlying PESTO pitch estimator is a standard PyTorch module and can therefore use the GPU,
+if available, by setting option `--gpu` to the id of the device you want to use for pitch estimation.
+
+Under the hood, the input is passed to the model as a single batch of CQT frames,
+so pitch is estimated for the whole track in parallel, making inference extremely fast.
+
+However, when dealing with very large audio files, processing the whole track at once can lead to OOM errors. 
+To circumvent this, one can split the batch of CQT frames into multiple chunks by setting option `-c`/`--num_chunks`.
+Chunks will be processed sequentially, thus reducing memory usage.
+
+As an example, a 48kHz audio file of 1 hour can be processed in 20 seconds only on a single GTX 1080 Ti when split into 10 chunks.
+
 ## Contributing
 
 - Currently, only a single model trained on [MIR-1K](https://zenodo.org/record/3532216#.ZG0kWhlBxhE) is provided.

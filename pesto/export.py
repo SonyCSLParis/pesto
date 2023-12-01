@@ -41,7 +41,7 @@ def export_png(output_file: str, timesteps, confidence, activations, lims=(21, 1
 
     bps = activations.shape[1] // 128
     activations = activations[:, bps*lims[0]: bps*lims[1]]
-    activations = activations * confidence.unsqueeze(1)
+    activations = activations * confidence[:, None]
     plt.imshow(activations.T,
                aspect='auto', origin='lower', cmap='inferno',
                extent=(timesteps[0], timesteps[-1]) + lims)

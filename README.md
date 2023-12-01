@@ -6,7 +6,7 @@ This code is the implementation of the [PESTO paper](https://arxiv.org/abs/2309.
 that has been accepted at [ISMIR 2023](https://ismir2023.ismir.net/).
 
 **Disclaimer:** This repository contains minimal code and should be used for inference only.
-If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (work in progress).
+If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (coming soon!).
 
 ## Installation
 
@@ -59,7 +59,8 @@ Alternatively, one can save timesteps, pitch, confidence and activation outputs 
 
 Finally, you can also visualize the pitch predictions by exporting them as a `png` file (you need `matplotlib` to be installed for PNG export). Here is an example:
 
-![example f0](https://github.com/SonyCSLParis/pesto/assets/36546630/2ad82c86-136a-4125-bf47-ea1b93408022)
+![example f0](https://github.com/SonyCSLParis/pesto/assets/36546630/5aa18c23-0154-4d2d-8021-2c23277b27a3)
+
 
 Multiple formats can be specified after the `-e` option.
 
@@ -81,7 +82,8 @@ Additionally, audio files can have any sampling rate; no resampling is required.
 
 By default, the model returns a probability distribution over all pitch bins.
 To convert it to a proper pitch, by default, we use Argmax-Local Weighted Averaging as in CREPE:
-![image](https://github.com/SonyCSLParis/pesto/assets/36546630/7d06bf85-585c-401f-a3c2-f2fab90dd1a7)
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/3138c33f-672a-477f-95a9-acaacf4418ab)
+
 
 Alternatively, one can use basic argmax of weighted average with option `-r`/`--reduction`.
 
@@ -150,11 +152,11 @@ Note that batched predictions are available only from the Python API and not fro
 
 ## Performances
 
-On [MIR-1K]() and [MDB-stem-synth](), PESTO outperforms other self-supervised baselines.
+On [MIR-1K](https://zenodo.org/record/3532216#.ZG0kWhlBxhE) and [MDB-stem-synth](https://zenodo.org/records/1481172), PESTO outperforms other self-supervised baselines.
 Its performances are close to CREPE's, which has 800x more parameters and was trained in a supervised way on a vast 
 dataset containing MIR-1K and MDB-stem-synth, among others.
 
-![image](https://github.com/SonyCSLParis/pesto/assets/36546630/9fbf15ef-7af9-4cd5-8832-f8fc24d43f25)
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/d6ae0306-ba8b-465a-8ca7-f916479a0ba5)
 
 
 ## Speed benchmark
@@ -165,7 +167,8 @@ granularity of the predictions, which can be controlled with the `--step_size` p
 
 Here is a speed comparison between CREPE and PESTO, averaged over 10 runs on the same machine.
 
-![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/8353c93d-e79f-497d-a09e-d8762e9a5cbc)
+![speed](https://github.com/SonyCSLParis/pesto/assets/36546630/612b1850-c2cf-4df1-9824-b8460a2f9148)
+
 
 - Audio file: `wav` format, 2m51s
 - Hardware: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz, 8 cores

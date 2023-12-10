@@ -146,9 +146,7 @@ By default, the function `pesto.predict` takes an audio waveform represented as 
 However, one may want to estimate the pitch of batches of (cropped) waveforms within a training pipeline, e.g. for DDSP-related applications.
 `pesto.predict` therefore accepts Tensor inputs of shape `(batch_size, num_channels, num_samples)` and returns batch-wise pitch predictions accordingly.
 
-Note that batched predictions are available only from the Python API and not from the CLI because:
-- handling audios of different lengths is annoying, I don't want to bother with that
-- when estimating pitch on
+Note that batched predictions are available only from the Python API and not from the CLI because handling audios of different lengths is annoying, and I don't want to bother with that.
 
 ## Performances
 

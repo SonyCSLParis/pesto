@@ -8,8 +8,8 @@ from .data import DataProcessor
 from .model import PESTOEncoder
 
 
-def load_dataprocessor(step_size, device: Optional[torch.device] = None):
-    return DataProcessor(step_size=step_size, **cqt_args).to(device)
+def load_dataprocessor(step_size, sampling_rate: Optional[int] = None, device: Optional[torch.device] = None):
+    return DataProcessor(step_size=step_size, sampling_rate=sampling_rate, **cqt_args).to(device)
 
 
 def load_model(model_name: str, device: Optional[torch.device] = None) -> PESTOEncoder:

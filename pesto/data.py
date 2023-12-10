@@ -35,12 +35,12 @@ class DataProcessor(nn.Module):
         self.lowest_bin = int(11 * self.bins_per_semitone / 2 + 0.5)
         self.highest_bin = self.lowest_bin + 88 * self.bins_per_semitone
 
+        # register a dummy tensor to get implicit access to the module's device
+        self.register_buffer("_device", torch.zeros(()), persistent=False)
+
         # sampling rate is lazily initialized
         if sampling_rate is not None:
             self.sampling_rate = sampling_rate
-
-        # register a dummy tensor to get implicit access to the module's device
-        self.register_buffer("_device", torch.zeros(()), persistent=False)
 
     def forward(self, x: torch.Tensor):
         r"""

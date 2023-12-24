@@ -4,7 +4,8 @@ from setuptools import setup, find_packages
 def get_readme_text():
     root_dir = Path(__file__).parent
     readme_path = root_dir / "README.md"
-    return readme_path.read_text()
+    f = open(readme_path, 'r', encoding='utf-8')
+    return f.read()
 
 
 setup(

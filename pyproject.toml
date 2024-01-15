@@ -8,7 +8,7 @@ version = "1.0.0"
 authors = [
     {name = "Alain Riou", email = "alain.riou@sony.com"}
 ]
-description = "Efficient pitch estimation with self-supervised learning",
+description = "Efficient pitch estimation with self-supervised learning"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 classifiers = [
@@ -33,13 +33,13 @@ matplotlib = ["matplotlib"]
 test = ["pytest"]
 
 [project.scripts]
-pesto = "pesto.main.py:pesto"
+pesto = "pesto.main:pesto"
 
 [project.urls]
 source = "https://github.com/SonyCSLParis/pesto"
 
-[tool.setuptools.packages.find]
-where = ["pesto"]
+[tool.pytest.ini_options]
+testpaths = "tests/"
 
 [tool.setuptools.package-data]
-weights = ["*.ckpt"]
+pesto = ["weights/*.ckpt"]

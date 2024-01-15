@@ -24,7 +24,7 @@ def load_model(checkpoint: str,
     if os.path.exists(checkpoint):  # handle user-provided checkpoints
         model_path = checkpoint
     else:
-        model_path = os.path.join(os.path.dirname(__file__), "weights", checkpoint + ".pth")
+        model_path = os.path.join(os.path.dirname(__file__), "weights", checkpoint + ".ckpt")
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"You passed an invalid checkpoint file: {checkpoint}.")
 

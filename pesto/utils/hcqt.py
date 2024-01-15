@@ -354,3 +354,39 @@ class CQT(nn.Module):
             phase_real = torch.cos(torch.atan2(CQT_imag, CQT_real))
             phase_imag = torch.sin(torch.atan2(CQT_imag, CQT_real))
             return torch.stack((phase_real, phase_imag), -1)
+
+
+class HarmonicCQT(nn.Module):
+    r"""Harmonic CQT layer, as described in Bittner et al. (20??)"""
+    def __init__(
+            self,
+            harmonics,
+            sr: int = 22050,
+            hop_length: int = 512,
+            fmin: float = 32.7,
+            fmax: float | None = None,
+            bins_per_semitone: int = 1,
+            n_bins: int = 84,
+            center_bins: bool = True
+    ):
+        super(HarmonicCQT, self).__init__()
+
+        if center_bins:
+            fmin = fmin / 2 ** ((bins_per_semitone - 1) / (24 * bins_per_semitone))
+
+        self.cqt_kernels = nn.ModuleList([
+            CQT(sr=sr, hop_length=hop_length, fmin=h*fmin, fmax=fmax, n_bins=n_bins,
+                bins_per_octave=12*bins_per_semitone, output_format="Complex")
+            for h in harmonics
+        ])
+
+    def forward(self, audio_waveforms: torch.Tensor):
+        r"""Converts a batch of waveforms into a batch of HCQTs.
+
+        Args:
+            audio_waveforms (torch.Tensor): Batch of waveforms, shape (batch_size, num_samples)
+
+        Returns:
+            Harmonic CQT, shape (batch_size, num_harmonics, num_freqs, num_timesteps, 2)
+        """
+        return torch.stack([cqt(audio_waveforms) for cqt in self.cqt_kernels], dim=1)

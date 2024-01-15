@@ -1,4 +1,4 @@
-from .parser import parse_args
+from pesto.utils.parser import parse_args
 from .core import predict_from_files
 
 

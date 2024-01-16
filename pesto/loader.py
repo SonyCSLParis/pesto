@@ -45,7 +45,7 @@ def load_model(checkpoint: str,
                   preprocessor=preprocessor,
                   crop_kwargs=hparams["pitch_shift"],
                   reduction=hparams["reduction"])
-    model.load_state_dict(state_dict)
+    model.load_state_dict(state_dict, strict=False)
     model.eval()
 
     return model

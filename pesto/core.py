@@ -93,8 +93,7 @@ def predict_from_files(
         export_format: Sequence[str] = ("csv",),
         no_convert_to_freq: bool = False,
         num_chunks: int = 1,
-        gpu: int = -1
-):
+        gpu: int = -1):
     r"""
 
     Args:

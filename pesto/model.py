@@ -229,6 +229,10 @@ class PESTO(nn.Module):
         return preds, confidence
 
     @property
+    def bins_per_semitone(self) -> int:
+        return self.preprocessor.hcqt_kwargs["bins_per_semitone"]
+
+    @property
     def hop_size(self) -> float:
         r"""Returns the hop size of the model (in milliseconds)"""
         return self.preprocessor.hop_size

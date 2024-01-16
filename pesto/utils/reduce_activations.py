@@ -30,7 +30,7 @@ def reduce_activations(activations: torch.Tensor, reduction: str = "alwa") -> to
         window = torch.arange(1, 2 * bps, device=device) - bps  # [-bps+1, -bps+2, ..., bps-2, bps-1]
         indices = (center_bin + window).clip_(min=0, max=num_bins - 1)
         cropped_activations = activations.gather(-1, indices)
-        cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(1, indices)
-        return (cropped_activations * cropped_pitches).sum(dim=1) / cropped_activations.sum(dim=1)
+        cropped_pitches = all_pitches.unsqueeze(0).expand_as(activations).gather(-1, indices)
+        return (cropped_activations * cropped_pitches).sum(dim=-1) / cropped_activations.sum(dim=-1)
 
     raise ValueError

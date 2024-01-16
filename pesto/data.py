@@ -84,11 +84,11 @@ class Preprocessor(nn.Module):
         # compute HCQT kernels if it does not exist or if the sampling rate has changed
         if sr is not None and sr != self.hcqt_sr:
             self.hcqt_sr = sr
-            self._reset_hcqt_layer()
+            self._reset_hcqt_kernels()
 
         return self.hcqt_kernels(audio)
 
-    def _reset_hcqt_layer(self) -> None:
+    def _reset_hcqt_kernels(self) -> None:
         hop_length = int(self.hop_size * self.hcqt_sr / 1000 + 0.5)
         self.hcqt_kernels = HarmonicCQT(sr=self.hcqt_sr,
                                         hop_length=hop_length,

@@ -36,4 +36,6 @@ def test_cli_gpu(file, fmt, convert_to_freq):
         suffix = ".semitones." + fmt
         option = " -F"
     os.system(f"pesto {file} --gpu 0 --export_format " + fmt + option)
-    assert os.path.isfile(file.rsplit('.', 1)[0] + suffix)
+    out_file = file.rsplit('.', 1)[0] + suffix
+    assert os.path.isfile(out_file)
+    os.unlink(out_file)

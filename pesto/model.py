@@ -161,7 +161,7 @@ class PESTO(nn.Module):
     def __init__(self,
                  encoder: nn.Module,
                  preprocessor: nn.Module,
-                 crop_kwargs: Mapping[str, Any] | None = None,
+                 crop_kwargs: Optional[Mapping[str, Any]] = None,
                  reduction: str = "alwa"):
         super(PESTO, self).__init__()
         self.encoder = encoder

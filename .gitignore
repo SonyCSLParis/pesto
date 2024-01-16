@@ -1,5 +1,5 @@
 .idea
-*/__pycache__
+**/__pycache__
 *.egg-info/
 .DS_Store
 dist/

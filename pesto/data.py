@@ -3,79 +3,93 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from .cqt import CQT
+from .utils import HarmonicCQT
 
 
-class DataProcessor(nn.Module):
+class ToLogMagnitude(nn.Module):
+    def __init__(self):
+        super(ToLogMagnitude, self).__init__()
+        self.eps = torch.finfo(torch.float32).eps
+
+    def forward(self, x):
+        x = x.abs()
+        x.clamp_(min=self.eps).log10_().mul_(20)
+        return x
+
+
+
+class Preprocessor(nn.Module):
     r"""
 
     Args:
-        step_size (float): step size between consecutive CQT frames (in SECONDS)
+        hop_size (float): step size between consecutive CQT frames (in milliseconds)
     """
-    _sampling_rate: Optional[int] = None
-
     def __init__(self,
-                 step_size: float,
-                 bins_per_semitone: int = 3,
+                 hop_size: float,
                  sampling_rate: Optional[int] = None,
-                 **cqt_kwargs):
-        super(DataProcessor, self).__init__()
-        self.step_size = step_size
-        self.bins_per_semitone = bins_per_semitone
+                 **hcqt_kwargs):
+        super(Preprocessor, self).__init__()
 
-        # CQT-related stuff
-        self.cqt_kwargs = cqt_kwargs
-        self.cqt_kwargs["bins_per_octave"] = 12 * bins_per_semitone
-        self.cqt = None
+        # HCQT
+        self.hcqt_sr = None
+        self.hcqt_kernels = None
+        self.hop_size = hop_size
+
+        self.hcqt_kwargs = hcqt_kwargs
 
         # log-magnitude
-        self.eps = torch.finfo(torch.float32).eps
-
-        # cropping
-        self.lowest_bin = int(11 * self.bins_per_semitone / 2 + 0.5)
-        self.highest_bin = self.lowest_bin + 88 * self.bins_per_semitone
-
-        # sampling rate is lazily initialized
-        if sampling_rate is not None:
-            self.sampling_rate = sampling_rate
+        self.to_log = ToLogMagnitude()
 
         # register a dummy tensor to get implicit access to the module's device
         self.register_buffer("_device", torch.zeros(()), persistent=False)
 
-    def forward(self, x: torch.Tensor):
+        # if the sampling rate is provided, instantiate the CQT kernels
+        if sampling_rate is not None:
+            self.hcqt_sr = sampling_rate
+            self._reset_hcqt_kernels()
+
+    def forward(self, x: torch.Tensor, sr: Optional[int] = None) -> torch.Tensor:
         r"""
 
         Args:
-            x: audio waveform, any sampling rate, shape (num_samples)
+            x (torch.Tensor): audio waveform or batch of audio waveforms, any sampling rate,
+                shape (batch_size?, num_samples)
+            sr (int, optional): sampling rate
 
         Returns:
-            log-magnitude CQT, shape (
+            torch.Tensor: log-magnitude CQT of batch of CQTs,
+                shape (batch_size?, num_timesteps, num_harmonics, num_freqs)
         """
-        # compute CQT from input waveform, and invert dims for (batch_size, time_steps, freq_bins)
-        complex_cqt = torch.view_as_complex(self.cqt(x)).transpose(1, 2)
-
-        # reshape and crop borders to fit training input shape
-        complex_cqt = complex_cqt[..., self.lowest_bin: self.highest_bin]
-
-        # flatten eventual batch dimensions so that batched audios can be processed in parallel
-        complex_cqt = complex_cqt.flatten(0, 1).unsqueeze(1)
+        # compute CQT from input waveform, and invert dims for (time_steps, num_harmonics, freq_bins)
+        # in other words, time becomes the batch dimension, enabling efficient processing for long audios.
+        complex_cqt = torch.view_as_complex(self.hcqt(x, sr=sr)).permute(0, 3, 1, 2)
+        complex_cqt.squeeze_(0)
 
         # convert to dB
-        log_cqt = complex_cqt.abs().clamp_(min=self.eps).log10_().mul_(20)
-        return log_cqt
+        return self.to_log(complex_cqt)
 
-    def _init_cqt_layer(self, sr: int, hop_length: int):
-        self.cqt = CQT(sr=sr, hop_length=hop_length, **self.cqt_kwargs).to(self._device.device)
+    def hcqt(self, audio: torch.Tensor, sr: Optional[int] = None) -> torch.Tensor:
+        r"""Compute the Harmonic CQT of the input audio after eventually recreating the kernels
+        (in case the sampling rate has changed).
 
-    @property
-    def sampling_rate(self) -> int:
-        return self._sampling_rate
+        Args:
+            audio (torch.Tensor): mono audio waveform, shape (batch_size, num_samples)
+            sr (int): sampling rate of the audio waveform.
+                If not specified, we assume it is the same as the previous processed audio waveform.
 
-    @sampling_rate.setter
-    def sampling_rate(self, sr: int) -> None:
-        if sr == self._sampling_rate:
-            return
+        Returns:
+            torch.Tensor: Complex Harmonic CQT (HCQT) of the input,
+                shape (batch_size, num_harmonics, num_freqs, num_timesteps, 2)
+        """
+        # compute HCQT kernels if it does not exist or if the sampling rate has changed
+        if sr is not None and sr != self.hcqt_sr:
+            self.hcqt_sr = sr
+            self._reset_hcqt_kernels()
 
-        hop_length = int(self.step_size * sr + 0.5)
-        self._init_cqt_layer(sr, hop_length)
-        self._sampling_rate = sr
+        return self.hcqt_kernels(audio)
+
+    def _reset_hcqt_kernels(self) -> None:
+        hop_length = int(self.hop_size * self.hcqt_sr / 1000 + 0.5)
+        self.hcqt_kernels = HarmonicCQT(sr=self.hcqt_sr,
+                                        hop_length=hop_length,
+                                        **self.hcqt_kwargs).to(self._device.device)

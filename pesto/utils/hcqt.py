@@ -364,7 +364,7 @@ class HarmonicCQT(nn.Module):
             sr: int = 22050,
             hop_length: int = 512,
             fmin: float = 32.7,
-            fmax: float | None = None,
+            fmax: Optional[float] = None,
             bins_per_semitone: int = 1,
             n_bins: int = 84,
             center_bins: bool = True

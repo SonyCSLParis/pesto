@@ -6,7 +6,7 @@ This code is the implementation of the [PESTO paper](https://arxiv.org/abs/2309.
 that received the Best Paper Award at [ISMIR 2023](https://ismir2023.ismir.net/).
 
 **Disclaimer:** This repository contains minimal code and should be used for inference only.
-If you want full implementation details or want to use PESTO for research purposes, take a look at ~~[this repository](https://github.com/aRI0U/pesto-full)~~ (coming soon!).
+If you want full implementation details or want to use PESTO for research purposes, take a look at [this repository](https://github.com/SonyCSLParis/pesto-full).
 
 ## Installation
 

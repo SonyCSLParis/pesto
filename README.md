@@ -22,6 +22,8 @@ This repository is implemented in [PyTorch](https://pytorch.org/) and has the fo
 - [torchaudio](https://pytorch.org/audio/stable/) for audio loading
 - `matplotlib` for exporting pitch predictions as images (optional)
 
+**Warning:** If installing in a clean environment, it may be safer to first install PyTorch [the recommended way](https://pytorch.org/get-started/locally/) before PESTO.
+
 ## Usage
 
 ### Command-line interface

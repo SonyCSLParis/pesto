@@ -24,6 +24,7 @@ jobs:
         sudo apt-get install -y libsox-dev
         python -m pip install --upgrade pip
         python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+        python -m pip install matplotlib
         python -m pip install pytest
         python -m pip install .
     - name: Test with pytest

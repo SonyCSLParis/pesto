@@ -5,9 +5,11 @@ import os
 import pytest
 
 import torch
+import torchaudio
 
 
 AUDIOS_DIR = os.path.join(os.path.dirname(__file__), "audios")
+print(torchaudio.__version__, torchaudio.get_audio_backend())
 
 
 @pytest.mark.parametrize("file, fmt, convert_to_freq",

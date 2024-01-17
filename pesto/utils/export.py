@@ -2,6 +2,12 @@ import warnings
 
 import numpy as np
 try:
+    CREPE_NOTES_AVAILABLE = True
+    import crepe_notes
+except (ImportError, ModuleNotFoundError):
+    CREPE_NOTES_AVAILABLE = False
+
+try:
     MATPLOTLIB_AVAILABLE = True
     import matplotlib.pyplot as plt
 except (IndexError, ModuleNotFoundError):
@@ -12,6 +18,9 @@ def export(fmt, output_file, timesteps, pitch, confidence, activations):
     output_file = output_file + '.' + fmt
     if fmt == "csv":
         export_csv(output_file, timesteps, pitch, confidence)
+
+    elif fmt == "mid":
+        export_mid(output_file, timesteps, pitch, confidence)
 
     elif fmt == "npz":
         export_npz(output_file, timesteps, pitch, confidence, activations)
@@ -28,6 +37,15 @@ def export_csv(output_file, timesteps, pitch, confidence):
     header = "time,frequency,confidence"
 
     np.savetxt(output_file, data, delimiter=',', fmt='%.3f', header=header, comments="")
+
+
+def export_mid(output_file, timesteps, pitch, confidence):
+    if not CREPE_NOTES_AVAILABLE:
+        warnings.warn("Exporting in MIDI format requires `crepe_notes` to be installed. "
+                      "Please check https://github.com/xavriley/crepe_notes for more information.")
+        return
+
+    crepe_notes.process
 
 
 def export_npz(output_file, timesteps, pitch, confidence, activations):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pesto-pitch"
-version = "1.0.0"
+dynamic = ["version"]
 authors = [
     {name = "Alain Riou", email = "alain.riou@sony.com"}
 ]
@@ -40,6 +40,9 @@ source = "https://github.com/SonyCSLParis/pesto"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"
+
+[tool.setuptools.dynamic]
+version = {attr = "pesto.__version__"}
 
 [tool.setuptools.package-data]
 pesto = ["weights/*.ckpt"]

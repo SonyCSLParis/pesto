@@ -21,7 +21,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install sox
+        sudo apt-get install -y libsox
         python -m pip install --upgrade pip
         python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
         python -m pip install pytest

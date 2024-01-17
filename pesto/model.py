@@ -215,10 +215,9 @@ class PESTO(nn.Module):
         if batch_size:
             activations = activations.view(batch_size, -1, activations.size(-1))
 
-        preds = reduce_activations(activations, reduction=self.reduction)
+        activations = activations.roll(-self.shift.cpu().item(), dims=-1)
 
-        # decrease by shift to get absolute pitch
-        preds.sub_(self.shift)
+        preds = reduce_activations(activations, reduction=self.reduction)
 
         if convert_to_freq:
             preds = 440 * 2 ** ((preds - 69) / 12)

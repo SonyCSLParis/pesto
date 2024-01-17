@@ -215,7 +215,7 @@ class PESTO(nn.Module):
         if batch_size:
             activations = activations.view(batch_size, -1, activations.size(-1))
 
-        activations = activations.roll(-self.shift.cpu().item(), dims=-1)
+        activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
 
         preds = reduce_activations(activations, reduction=self.reduction)
 

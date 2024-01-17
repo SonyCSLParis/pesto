@@ -9,6 +9,7 @@ import torchaudio
 
 
 AUDIOS_DIR = os.path.join(os.path.dirname(__file__), "audios")
+torchaudio.set_audio_backend("sox_io")
 print(torchaudio.__version__, torchaudio.get_audio_backend())
 
 

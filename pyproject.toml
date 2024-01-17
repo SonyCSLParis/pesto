@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pesto-pitch"
+dynamic = ["version"]
+authors = [
+    {name = "Alain Riou", email = "alain.riou@sony.com"}
+]
+description = "Efficient pitch estimation with self-supervised learning"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.8"
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',  # If licence is provided must be on the repository
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+]
+dependencies = [
+    'numpy>=1.21.5',
+    'scipy>=1.8.1',
+    'tqdm>=4.66.1',
+    'torch>=2.0.1',
+    'torchaudio>=2.0.2'
+]
+
+[project.optional-dependencies]
+matplotlib = ["matplotlib"]
+test = ["pytest"]
+
+[project.scripts]
+pesto = "pesto.main:pesto"
+
+[project.urls]
+source = "https://github.com/SonyCSLParis/pesto"
+
+[tool.pytest.ini_options]
+testpaths = "tests/"
+
+[tool.setuptools.dynamic]
+version = {attr = "pesto.__version__"}
+
+[tool.setuptools.package-data]
+pesto = ["weights/*.ckpt"]

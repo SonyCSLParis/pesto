@@ -22,6 +22,8 @@ This repository is implemented in [PyTorch](https://pytorch.org/) and has the fo
 - [torchaudio](https://pytorch.org/audio/stable/) for audio loading
 - `matplotlib` for exporting pitch predictions as images (optional)
 
+**Warning:** If installing in a clean environment, it may be safer to first install PyTorch [the recommended way](https://pytorch.org/get-started/locally/) before PESTO.
+
 ## Usage
 
 ### Command-line interface
@@ -107,48 +109,64 @@ import pesto
 
 # predict the pitch of your audio tensors directly within your own Python code
 x, sr = torchaudio.load("my_file.wav")
-timesteps, pitch, confidence, activations = pesto.predict(x, sr, step_size=10.)
+x = x.mean(dim=0)  # PESTO takes mono audio as input
+timesteps, pitch, confidence, activations = pesto.predict(x, sr)
+
+# or predict using your own custom checkpoint
+predictions = pesto.predict(x, sr, model_name="/path/to/checkpoint.ckpt")
 
 # You can also predict pitches from audio files directly
-pesto.predict_from_files(["example1.wav", "example2.mp3", "example3.ogg"], step_size=10., export_format=["csv"])
+pesto.predict_from_files(["example1.wav", "example2.mp3", "example3.ogg"], export_format=["csv"])
 ```
+`pesto.predict` supports batched inputs, which should then have shape `(batch_size, num_samples)`.
+
+**Warning:** If you forget to convert a stereo audio in mono, channels will be treated as batch dimensions and you will 
+get predictions for each channel separately.
 
 #### Advanced usage
 
-If not provided,  `pesto.predict` will first load the CQT kernels and the model before performing 
+`pesto.predict` will first load the CQT kernels and the model before performing 
 any pitch estimation. If you want to process a significant number of files, calling `predict` several times will then 
 re-initialize the same model for each tensor.
 
-To avoid this time-consuming step, one can manually instantiate  the model   and data processor, then pass them directly 
-as args to the `predict` function. To do so, one has to use the underlying methods from `pesto.utils`:
+To avoid this time-consuming step, one can manually instantiate  the model with `load_model`,
+then call the forward method of the model instead:
 
 ```python
 import torch
 
-from pesto import predict
-from pesto.utils import load_model, load_dataprocessor
+from pesto import load_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model = load_model("mir-1k", device=device)
-data_processor = load_dataprocessor(step_size=0.01, device=device)
+pesto_model = load_model("mir-1k", step_size=20.).to(device)
 
 for x, sr in ...:
-    data_processor.sampling_rate = sr  # The data_processor handles waveform->CQT conversion so it must know the sampling rate
-    predictions = predict(x, sr, model=model)
+    x = x.to(device)
+    predictions, confidence, activations = pesto_model(x, sr)
     ...
 ```
-Note that when passing a list of files to `pesto.predict_from_files(...)` or the CLI directly, the model  is loaded only
-once so you don't have to bother with that in general.
 
-#### Batched pitch estimation
+Note that the `PESTO` object returned by `load_model` is a subclass of `nn.Module` 
+and its `forward` method also supports batched inputs.
+One can therefore easily integrate PESTO within their own architecture by doing:
+```python
+import torch
+import torch.nn as nn
 
-By default, the function `pesto.predict` takes an audio waveform represented as a Tensor object of shape `(num_channels, num_samples)`.
-However, one may want to estimate the pitch of batches of (cropped) waveforms within a training pipeline, e.g. for DDSP-related applications.
-`pesto.predict` therefore accepts Tensor inputs of shape `(batch_size, num_channels, num_samples)` and returns batch-wise pitch predictions accordingly.
+from pesto import load_model
 
-Note that batched predictions are available only from the Python API and not from the CLI because:
-- handling audios of different lengths is annoying, I don't want to bother with that
-- when estimating pitch on
+
+class MyGreatModel(nn.Module):
+    def __init__(self, step_size, sr=44100, *args, **kwargs):
+        super(MyGreatModel, self).__init__()
+        self.f0_estimator = load_model("mir-1k", step_size, sampling_rate=sr)
+        ...
+
+    def forward(self, x):
+        with torch.no_grad():
+            f0, conf = self.f0_estimator(x, convert_to_freq=True, return_activations=False)
+        ...
+```
 
 ## Performances
 

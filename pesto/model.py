@@ -1,7 +1,14 @@
 from functools import partial
+from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+
+from .utils import CropCQT
+from .utils import reduce_activations
+
+
+OUTPUT_TYPE = Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
 
 
 class ToeplitzLinear(nn.Conv1d):
@@ -18,7 +25,7 @@ class ToeplitzLinear(nn.Conv1d):
         return super(ToeplitzLinear, self).forward(input.unsqueeze(-2)).squeeze(-2)
 
 
-class PESTOEncoder(nn.Module):
+class Resnet1d(nn.Module):
     """
     Basic CNN similar to the one in Johannes Zeitler's report,
     but for longer HCQT input (always stride 1 in time)
@@ -29,7 +36,8 @@ class PESTOEncoder(nn.Module):
     not over time (in order to work with variable length input).
     Outputs one channel with sigmoid activation.
 
-    Args (Defaults: BasicCNN by Johannes Zeitler but with 1 input channel):
+    Args (Defaults: BasicCNN by Johannes Zeitler but with 6 input channels):
+        n_chan_input:     Number of input channels (harmonics in HCQT)
         n_chan_layers:    Number of channels in the hidden layers (list)
         n_prefilt_layers: Number of repetitions of the prefiltering layer
         residual:         If True, use residual connections for prefiltering (default: False)
@@ -39,78 +47,90 @@ class PESTOEncoder(nn.Module):
         p_dropout:        Dropout probability
     """
 
-    def __init__(
-            self,
-            n_chan_layers=(20, 20, 10, 1),
-            n_prefilt_layers=1,
-            residual=False,
-            n_bins_in=216,
-            output_dim=128,
-            num_output_layers: int = 1
-    ):
-        super(PESTOEncoder, self).__init__()
+    def __init__(self,
+                 n_chan_input=1,
+                 n_chan_layers=(20, 20, 10, 1),
+                 n_prefilt_layers=1,
+                 prefilt_kernel_size=15,
+                 residual=False,
+                 n_bins_in=216,
+                 output_dim=128,
+                 activation_fn: str = "leaky",
+                 a_lrelu=0.3,
+                 p_dropout=0.2):
+        super(Resnet1d, self).__init__()
 
-        activation_layer = partial(nn.LeakyReLU, negative_slope=0.3)
+        self.hparams = dict(n_chan_input=n_chan_input,
+                            n_chan_layers=n_chan_layers,
+                            n_prefilt_layers=n_prefilt_layers,
+                            prefilt_kernel_size=prefilt_kernel_size,
+                            residual=residual,
+                            n_bins_in=n_bins_in,
+                            output_dim=output_dim,
+                            activation_fn=activation_fn,
+                            a_lrelu=a_lrelu,
+                            p_dropout=p_dropout)
 
+        if activation_fn == "relu":
+            activation_layer = nn.ReLU
+        elif activation_fn == "silu":
+            activation_layer = nn.SiLU
+        elif activation_fn == "leaky":
+            activation_layer = partial(nn.LeakyReLU, negative_slope=a_lrelu)
+        else:
+            raise ValueError
+
+        n_in = n_chan_input
         n_ch = n_chan_layers
         if len(n_ch) < 5:
             n_ch.append(1)
 
-        # Layer normalization over frequency
-        self.layernorm = nn.LayerNorm(normalized_shape=[1, n_bins_in])
+        # Layer normalization over frequency and channels (harmonics of HCQT)
+        self.layernorm = nn.LayerNorm(normalized_shape=[n_in, n_bins_in])
 
         # Prefiltering
+        prefilt_padding = prefilt_kernel_size // 2
         self.conv1 = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=n_ch[0], kernel_size=15, padding=7, stride=1),
-            activation_layer()
+            nn.Conv1d(in_channels=n_in,
+                      out_channels=n_ch[0],
+                      kernel_size=prefilt_kernel_size,
+                      padding=prefilt_padding,
+                      stride=1),
+            activation_layer(),
+            nn.Dropout(p=p_dropout)
         )
         self.n_prefilt_layers = n_prefilt_layers
-        self.prefilt_list = nn.ModuleList()
-        for p in range(1, n_prefilt_layers):
-            self.prefilt_list.append(nn.Sequential(
-                nn.Conv1d(in_channels=n_ch[0], out_channels=n_ch[0], kernel_size=15, padding=7, stride=1),
-                activation_layer()
-            ))
+        self.prefilt_layers = nn.ModuleList(*[
+            nn.Sequential(
+                nn.Conv1d(in_channels=n_ch[0],
+                          out_channels=n_ch[0],
+                          kernel_size=prefilt_kernel_size,
+                          padding=prefilt_padding,
+                          stride=1),
+                activation_layer(),
+                nn.Dropout(p=p_dropout)
+            )
+            for _ in range(n_prefilt_layers-1)
+        ])
         self.residual = residual
 
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=n_ch[0],
-                out_channels=n_ch[1],
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            activation_layer()
-        )
-
-        self.conv3 = nn.Sequential(
-            nn.Conv1d(in_channels=n_ch[1], out_channels=n_ch[2], kernel_size=1, padding=0, stride=1),
-            activation_layer()
-        )
-
-        self.conv4 = nn.Sequential(
-            nn.Conv1d(in_channels=n_ch[2], out_channels=n_ch[3], kernel_size=1, padding=0, stride=1),
-            activation_layer(),
-            nn.Dropout(),
-            nn.Conv1d(in_channels=n_ch[3], out_channels=n_ch[4], kernel_size=1, padding=0, stride=1)
-        )
+        conv_layers = []
+        for i in range(len(n_chan_layers)-1):
+            conv_layers.extend([
+                nn.Conv1d(in_channels=n_ch[i],
+                          out_channels=n_ch[i + 1],
+                          kernel_size=1,
+                          padding=0,
+                          stride=1),
+                activation_layer(),
+                nn.Dropout(p=p_dropout)
+            ])
+        self.conv_layers = nn.Sequential(*conv_layers)
 
         self.flatten = nn.Flatten(start_dim=1)
-
-        layers = []
-        pre_fc_dim = n_bins_in * n_ch[4]
-        for i in range(num_output_layers-1):
-            layers.extend([
-                ToeplitzLinear(pre_fc_dim, pre_fc_dim),
-                activation_layer()
-            ])
-        self.pre_fc = nn.Sequential(*layers)
-        self.fc = ToeplitzLinear(pre_fc_dim, output_dim)
+        self.fc = ToeplitzLinear(n_bins_in * n_ch[-1], output_dim)
 
         self.final_norm = nn.Softmax(dim=-1)
-
-        self.register_buffer("abs_shift", torch.zeros((), dtype=torch.long), persistent=True)
 
     def forward(self, x):
         r"""
@@ -118,21 +138,100 @@ class PESTOEncoder(nn.Module):
         Args:
             x (torch.Tensor): shape (batch, channels, freq_bins)
         """
-        x_norm = self.layernorm(x)
+        x = self.layernorm(x)
 
-        x = self.conv1(x_norm)
+        x = self.conv1(x)
         for p in range(0, self.n_prefilt_layers - 1):
-            prefilt_layer = self.prefilt_list[p]
+            prefilt_layer = self.prefilt_layers[p]
             if self.residual:
                 x_new = prefilt_layer(x)
                 x = x_new + x
             else:
                 x = prefilt_layer(x)
-        conv2_lrelu = self.conv2(x)
-        conv3_lrelu = self.conv3(conv2_lrelu)
 
-        y_pred = self.conv4(conv3_lrelu)
-        y_pred = self.flatten(y_pred)
-        y_pred = self.pre_fc(y_pred)
-        y_pred = self.fc(y_pred)
+        x = self.conv_layers(x)
+        x = self.flatten(x)
+
+        y_pred = self.fc(x)
+
         return self.final_norm(y_pred)
+
+
+class PESTO(nn.Module):
+    def __init__(self,
+                 encoder: nn.Module,
+                 preprocessor: nn.Module,
+                 crop_kwargs: Optional[Mapping[str, Any]] = None,
+                 reduction: str = "alwa"):
+        super(PESTO, self).__init__()
+        self.encoder = encoder
+        self.preprocessor = preprocessor
+
+        # crop CQT
+        if crop_kwargs is None:
+            crop_kwargs = {}
+        self.crop_cqt = CropCQT(**crop_kwargs)
+
+        self.reduction = reduction
+
+        # constant shift to get absolute pitch from predictions
+        self.register_buffer('shift', torch.zeros((), dtype=torch.float), persistent=True)
+
+    def forward(self,
+                audio_waveforms: torch.Tensor,
+                sr: Optional[int] = None,
+                convert_to_freq: bool = False,
+                return_activations: bool = False) -> OUTPUT_TYPE:
+        r"""
+
+        Args:
+            audio_waveforms (torch.Tensor): mono audio waveform or batch of mono audio waveforms,
+                shape (batch_size?, num_samples)
+            sr (int, optional): sampling rate, defaults to the previously used sampling rate
+            convert_to_freq (bool): whether to convert the result to frequencies or return fractional semitones instead.
+            return_activations (bool): whether to return activations or pitch predictions only
+
+        Returns:
+            preds (torch.Tensor): pitch predictions in SEMITONES, shape (batch_size?, num_timesteps)
+                where `num_timesteps` ~= `num_samples` / (`self.hop_size` * `sr`)
+            confidence (torch.Tensor): confidence of whether frame is voiced or unvoiced in [0, 1],
+                shape (batch_size?, num_timesteps)
+            activations (torch.Tensor): activations of the model, shape (batch_size?, num_timesteps, output_dim)
+        """
+        batch_size = audio_waveforms.size(0) if audio_waveforms.ndim == 2 else None
+        x = self.preprocessor(audio_waveforms, sr=sr)
+        x = self.crop_cqt(x)  # the CQT has to be cropped beforehand
+
+        # for now, confidence is computed very naively just based on energy in the CQT
+        confidence = x.mean(dim=-2).max(dim=-1).values
+        conf_min, conf_max = confidence.min(dim=-1, keepdim=True).values, confidence.max(dim=-1, keepdim=True).values
+        confidence = (confidence - conf_min) / (conf_max - conf_min)
+
+        # flatten batch_size and time_steps since anyway predictions are made on CQT frames independently
+        if batch_size:
+            x = x.flatten(0, 1)
+
+        activations = self.encoder(x)
+        if batch_size:
+            activations = activations.view(batch_size, -1, activations.size(-1))
+
+        activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
+
+        preds = reduce_activations(activations, reduction=self.reduction)
+
+        if convert_to_freq:
+            preds = 440 * 2 ** ((preds - 69) / 12)
+
+        if return_activations:
+            return preds, confidence, activations
+
+        return preds, confidence
+
+    @property
+    def bins_per_semitone(self) -> int:
+        return self.preprocessor.hcqt_kwargs["bins_per_semitone"]
+
+    @property
+    def hop_size(self) -> float:
+        r"""Returns the hop size of the model (in milliseconds)"""
+        return self.preprocessor.hop_size

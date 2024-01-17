@@ -15,4 +15,4 @@ def synth_data_16k():
 def test_build_timesteps(synth_data_16k, step_size):
     timesteps, *_ = predict(*synth_data_16k, step_size=step_size)
     diff = timesteps[1:] - timesteps[:-1]
-    torch.testing.assert_close(diff, torch.full_like(diff, step_size))
+    torch.testing.assert_close(diff, torch.full_like(diff, step_size / 1000))

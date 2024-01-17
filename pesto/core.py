@@ -33,7 +33,7 @@ def _predict(x: torch.Tensor,
     activations = torch.cat(activations, dim=0)
 
     # compute timesteps
-    timesteps = torch.arange(preds.size(-1), device=x.device) * model.hop_size
+    timesteps = torch.arange(preds.size(-1), device=x.device) * model.hop_size / 1000
 
     return timesteps, preds, confidence, activations
 

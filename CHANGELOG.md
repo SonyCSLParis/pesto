@@ -9,7 +9,7 @@
 - replace `setup.py` by `pyproject.toml`
 - fix a few issues
 - improve README and documentation
-- enable MIDI export thanks to [crepe-notes](https://github.com/xavriley/crepe_notes)
+- Beta support for MIDI export with [crepe-notes](https://github.com/xavriley/crepe_notes)
 
 ## v0.1.1
 

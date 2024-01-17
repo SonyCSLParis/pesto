@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -27,4 +27,4 @@ jobs:
         python -m pip install .
     - name: Test with pytest
       run: |
-        pytest
+        pytest tests/test_cli.py

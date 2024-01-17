@@ -4,3 +4,8 @@
 .DS_Store
 dist/
 build/
+
+# output files
+**/*.csv
+**/*.mid
+**/*.png

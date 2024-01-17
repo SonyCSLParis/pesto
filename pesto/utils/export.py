@@ -62,8 +62,8 @@ def export_mid(output_file, timesteps, pitch, confidence):
     process_crepe_notes(pitch,
                         confidence,
                         audio_path,
-                        sensitivity=0.005,
-                        min_duration=0.05,
+                        sensitivity=0.002,
+                        min_duration=0.06,
                         disable_splitting=True,
                         use_cwd=False,
                         default_sample_rate=44100)
@@ -83,7 +83,7 @@ def export_png(output_file: str, timesteps, confidence, activations, lims=(21, 1
     activations = activations * confidence[:, None]
     plt.imshow(activations.T,
                aspect='auto', origin='lower', cmap='inferno',
-               extent=(timesteps[0] / 1000., timesteps[-1] / 1000.) + lims)
+               extent=(timesteps[0], timesteps[-1]) + lims)
 
     plt.xlabel("Time (s)")
     plt.title(output_file.rsplit('.', 2)[0])

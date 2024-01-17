@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0
+## v1.0.0 - 2024-01-17
 
 - Change API under the hood to make it more object-oriented
   - store all utilities inside a `PESTO` object that is a subclass of `nn.Module`
@@ -9,7 +9,6 @@
 - replace `setup.py` by `pyproject.toml`
 - fix a few issues
 - improve README and documentation
-- Beta support for MIDI export with [crepe-notes](https://github.com/xavriley/crepe_notes)
 
 ## v0.1.1
 

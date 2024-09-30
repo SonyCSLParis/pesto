@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # FORMAT = pyaudio.paFloat32
     CHANNELS = 1
     RATE = 48000
-    BUFFER_SIZE = 8192
+    BUFFER_SIZE = 4096
     N_BUF = int(BUFFER_SIZE/CHUNKSIZE) + 1
 
     device = "cpu"

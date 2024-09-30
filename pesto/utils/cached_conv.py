@@ -2,39 +2,33 @@ r"""Cached convolutions. Original code from Antoine Caillon (former IRCAM).
 See https://github.com/acids-ircam/cached_conv/tree/master"""
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class CachedPadding1d(nn.Module):
     """
     Cached Padding implementation, replace zero padding with the end of
     the previous tensor.
+
+    Compared to original implementation, we only consider mono signals and batch size 1.
     """
 
     def __init__(self, padding, crop=False):
         super().__init__()
-        self.initialized = 0
         self.padding = padding
         self.crop = crop
 
+        self.init_cache()
+
     @torch.jit.unused
     @torch.no_grad()
-    def init_cache(self, x):
-        b, c, _ = x.shape
-        self.register_buffer(
-            "pad",
-            torch.zeros(MAX_BATCH_SIZE, c, self.padding).to(x))
-        self.initialized += 1
+    def init_cache(self):
+        self.register_buffer("pad", torch.zeros(1, 1, self.padding), persistent=False)
 
     def forward(self, x):
-        if not self.initialized:
-            self.init_cache(x)
-
         if self.padding:
-            x = torch.cat([self.pad[:x.shape[0]], x], -1)
-            self.pad[:x.shape[0]].copy_(x[..., -self.padding:])
-
-            if self.crop:
-                x = x[..., :-self.padding]
+            x = torch.cat((self.pad, x), -1)
+            self.pad.copy_(x[..., -self.padding:])
 
         return x
 
@@ -46,6 +40,7 @@ class CachedConv1d(nn.Conv1d):
 
     def __init__(self, *args, **kwargs):
         padding = kwargs.get("padding", 0)
+        mirror = kwargs.pop("mirror", 0)
         cumulative_delay = kwargs.pop("cumulative_delay", 0)
 
         kwargs["padding"] = 0
@@ -54,10 +49,11 @@ class CachedConv1d(nn.Conv1d):
 
         if isinstance(padding, int):
             r_pad = padding
-            padding = 2 * padding
         elif isinstance(padding, list) or isinstance(padding, tuple):
             r_pad = padding[1]
             padding = padding[0] + padding[1]
+        else:
+            raise TypeError("padding must be int or list or tuple")
 
         s = self.stride[0]
         cd = cumulative_delay
@@ -68,11 +64,13 @@ class CachedConv1d(nn.Conv1d):
 
         self.cache = CachedPadding1d(padding)
         self.downsampling_delay = CachedPadding1d(stride_delay, crop=True)
+        self.mirror = nn.ReflectionPad1d((0, mirror)) if mirror > 0 else nn.Identity()
 
     def forward(self, x):
-        x = self.downsampling_delay(x)
+        # x = self.downsampling_delay(x)  NOTE: not sure we actually need this thing
         x = self.cache(x)
-        return nn.functional.conv1d(
+        x = self.mirror(x)
+        return F.conv1d(
             x,
             self.weight,
             self.bias,
@@ -101,11 +99,7 @@ class CachedConvTranspose1d(nn.ConvTranspose1d):
         b, c, _ = x.shape
         self.register_buffer(
             "cache",
-            torch.zeros(
-                MAX_BATCH_SIZE,
-                c,
-                2 * self.padding[0],
-            ).to(x))
+            torch.zeros(1, c, 2 * self.padding[0]).to(x))
         self.initialized += 1
 
     def forward(self, x):
@@ -165,49 +159,3 @@ class Conv1d(nn.Conv1d):
             self.dilation,
             self.groups,
         )
-
-
-class AlignBranches(nn.Module):
-
-    def __init__(self, *branches, delays=None, cumulative_delay=0, stride=1):
-        super().__init__()
-        self.branches = nn.ModuleList(branches)
-
-        if delays is None:
-            delays = list(map(lambda x: x.cumulative_delay, self.branches))
-
-        max_delay = max(delays)
-
-        self.paddings = nn.ModuleList([
-            CachedPadding1d(p, crop=True)
-            for p in map(lambda f: max_delay - f, delays)
-        ])
-
-        self.cumulative_delay = int(cumulative_delay * stride) + max_delay
-
-    def forward(self, x):
-        outs = []
-        for branch, pad in zip(self.branches, self.paddings):
-            delayed_x = pad(x)
-            outs.append(branch(delayed_x))
-        return outs
-
-
-class Branches(nn.Module):
-
-    def __init__(self, *branches, delays=None, cumulative_delay=0, stride=1):
-        super().__init__()
-        self.branches = nn.ModuleList(branches)
-
-        if delays is None:
-            delays = list(map(lambda x: x.cumulative_delay, self.branches))
-
-        max_delay = max(delays)
-
-        self.cumulative_delay = int(cumulative_delay * stride) + max_delay
-
-    def forward(self, x):
-        outs = []
-        for branch in self.branches:
-            outs.append(branch(x))
-        return outs

@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     device = "cpu"
     # cc.use_cached_conv(True)
-    pesto_model = load_model("vqt-v2", step_size=10., sampling_rate=RATE).to(device)
+    pesto_model = load_model("mir-1k", step_size=10., sampling_rate=RATE).to(device)
 
     # p = pyaudio.PyAudio()
     buffer = bytearray(BUFFER_SIZE)

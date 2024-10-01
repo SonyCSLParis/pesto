@@ -37,7 +37,6 @@ class CachedConv1d(nn.Conv1d):
     """
     Implementation of a Conv1d operation with cached padding
     """
-
     def __init__(self, *args, **kwargs):
         padding = kwargs.get("padding", 0)
         mirror = kwargs.pop("mirror", 0)
@@ -45,7 +44,7 @@ class CachedConv1d(nn.Conv1d):
 
         kwargs["padding"] = 0
 
-        super().__init__(*args, **kwargs)
+        super(CachedConv1d, self).__init__(*args, **kwargs)
 
         if isinstance(padding, int):
             r_pad = padding
@@ -70,15 +69,7 @@ class CachedConv1d(nn.Conv1d):
         # x = self.downsampling_delay(x)  NOTE: not sure we actually need this thing
         x = self.cache(x)
         x = self.mirror(x)
-        return F.conv1d(
-            x,
-            self.weight,
-            self.bias,
-            self.stride,
-            self.padding,
-            self.dilation,
-            self.groups,
-        )
+        return super(CachedConv1d, self).forward(x)
 
 
 class CachedConvTranspose1d(nn.ConvTranspose1d):

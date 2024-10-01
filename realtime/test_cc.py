@@ -6,8 +6,6 @@ import torchaudio
 import time
 import numpy as np
 
-# import cached_conv as cc
-
 # import pyaudio
 # from pythonosc import udp_client
 
@@ -25,7 +23,7 @@ if __name__ == "__main__":
 
     device = "cpu"
     # cc.use_cached_conv(True)
-    pesto_model = load_model("vqt-v2", step_size=10., sampling_rate=RATE).to(device)
+    pesto_model = load_model("mir-1k", step_size=10., sampling_rate=RATE).to(device)
 
     # p = pyaudio.PyAudio()
     buffer = bytearray(BUFFER_SIZE)
@@ -36,50 +34,56 @@ if __name__ == "__main__":
 
     # client = udp_client.SimpleUDPClient("127.0.0.1", 3333)
 
+    with torch.inference_mode():
+        print('Recording...')
+        start = time.time()
+        i = 0
+        while True:
+            # print(stream.get_read_available())
+            # while stream.get_read_available() > CHUNKSIZE:
+            #     chunk = stream.read(CHUNKSIZE,exception_on_overflow=False)
+            #     if len(buffers) == N_BUF:
+            #         buffers.pop(0)
+            #
+            #     #print(chunk)
+            #
+            #
+            #     #compute energy of signal
+            #     buffers.append(chunk)
+            #     so_far = 0
+            chunk = os.urandom(CHUNKSIZE)
 
-    print('Recording...')
-    start = time.time()
-    i = 0
-    while True:
-        # print(stream.get_read_available())
-        # while stream.get_read_available() > CHUNKSIZE:
-        #     chunk = stream.read(CHUNKSIZE,exception_on_overflow=False)
-        #     if len(buffers) == N_BUF:
-        #         buffers.pop(0)
-        #
-        #     #print(chunk)
-        #
-        #
-        #     #compute energy of signal
-        #     buffers.append(chunk)
-        #     so_far = 0
-        chunk = os.urandom(CHUNKSIZE)
+            buffer[:] = chunk
 
-        buffer[:] = chunk
+            #amplitude of last_buffer
+            amp = 0
+            # to f32
+            fa = np.frombuffer(chunk, dtype='float32')
+            #print(fa)
 
-        #amplitude of last_buffer
-        amp = 0
-        # to f32
-        fa = np.frombuffer(chunk, dtype='float32')
-        #print(fa)
+            # for k in range(len(fa)):
+            #     val = fa[k]
+            #     amp += val*val
 
-        for k in range(len(fa)):
-            val = fa[k]
-            amp += val*val
+            #tbuffer = torch.frombuffer(buffer,dtype=torch.int16).type(torch.float32)
+            tbuffer = torch.frombuffer(buffer, dtype=torch.uint8).to(torch.float32)
+            tbuffer.div_(256).sub_(0.5)
+            # print(buffer, tbuffer.shape)
+            #predictions,confidence,activations = pesto_model(buffer,RATE)
+            tbuffer = tbuffer.to(device)
+            #a,b = pesto_model(tbuffer,RATE)
+            # print(tbuffer.shape)
+            f0, conf = pesto_model(tbuffer, convert_to_freq=False, return_activations=False)
 
-        #tbuffer = torch.frombuffer(buffer,dtype=torch.int16).type(torch.float32)
-        tbuffer = torch.frombuffer(buffer, dtype=torch.uint8).to(torch.float32)
-        tbuffer.div_(256).sub_(0.5)
-        # print(buffer, tbuffer.shape)
-        #predictions,confidence,activations = pesto_model(buffer,RATE)
-        tbuffer = tbuffer.to(device)
-        #a,b = pesto_model(tbuffer,RATE)
-        # print(tbuffer.shape)
-        f0, conf = pesto_model(tbuffer, convert_to_freq=True, return_activations=False)
+            # log frequencies and speed in FPS
+            i += 1
+            if i % 10 == 0:
+                print(f0, i / (time.time() - start))
 
-        # log frequencies and speed in FPS
-        i += 1
-        print(f0.item(), i / (time.time() - start))#,conf)
-        #print(amp)
-        # client.send_message("/note", [f0[len(f0)-1].item(), amp])
-        # break
+            if i == 500:
+                end = time.time()
+                print(end - start)
+                break
+            #print(amp)
+            # client.send_message("/note", [f0[len(f0)-1].item(), amp])
+            # break

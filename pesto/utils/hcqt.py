@@ -167,7 +167,7 @@ class NNAudioCQT(nn.Module):
             norm=1,
             window="hann",
             center=True,
-            pad_mode="constant",
+            pad_mode="reflect",
             trainable=False,
             output_format="Magnitude"
     ):
@@ -246,7 +246,7 @@ class NNAudioCQT(nn.Module):
             return torch.stack((phase_real, phase_imag), -1)
 
 
-class CQT(nn.Module):
+class BaseCQT(nn.Module):
     def __init__(
             self,
             sr=22050,
@@ -264,7 +264,7 @@ class CQT(nn.Module):
             output_format="Magnitude"
     ):
 
-        super().__init__()
+        super(BaseCQT, self).__init__()
 
         self.trainable = trainable
         self.n_bins = n_bins
@@ -314,10 +314,10 @@ class CQT(nn.Module):
             margin = 1e-8 if self.trainable else 0
             return cqt.pow(2).sum(-3).add(margin).sqrt()
 
-        cqt_real, cqt_imag = cqt.split(self.n_bins, dim=-2)
         if output_format == "Complex":
-            return torch.stack((cqt_real, cqt_imag), -1)
+            return cqt.permute(0, 2, 3, 1)
 
+        cqt_real, cqt_imag = cqt.split(self.n_bins, dim=-2)
         if output_format == "Phase":
             phase_real = torch.cos(torch.atan2(cqt_imag, cqt_real))
             phase_imag = torch.sin(torch.atan2(cqt_imag, cqt_real))
@@ -326,8 +326,8 @@ class CQT(nn.Module):
         raise ValueError(f"Invalid output format: {output_format}.")
 
 
-class RegularCQT(CQT):
-    def __init__(self, *args, pad_mode='zeros', **kwargs):
+class RegularCQT(BaseCQT):
+    def __init__(self, *args, pad_mode="reflect", **kwargs):
         super().__init__(*args, **kwargs)
 
         padding = self.kernel_width // 2 if self.center else 0
@@ -343,7 +343,7 @@ class RegularCQT(CQT):
         self.init_weights()
 
 
-class StreamingCQT(CQT):
+class StreamingCQT(BaseCQT):
     def __init__(self, *args, mirror=0., **kwargs):
         super(StreamingCQT, self).__init__(*args, **kwargs)
 
@@ -365,6 +365,22 @@ class StreamingCQT(CQT):
         self.init_weights()
 
 
+class CQT:
+    regular_only_kwargs = ["pad_mode"]
+    streaming_only_kwargs = ["mirror"]
+
+    def __new__(cls, *args, **kwargs):
+        streaming = kwargs.pop("streaming", False)
+        if streaming:
+            for kwarg in cls.regular_only_kwargs:
+                kwargs.pop(kwarg, None)
+            return StreamingCQT(*args, **kwargs)
+
+        for kwarg in cls.streaming_only_kwargs:
+            kwargs.pop(kwarg, None)
+        return RegularCQT(*args, **kwargs)
+
+
 class HarmonicCQT(nn.Module):
     r"""Harmonic CQT layer, as described in Bittner et al. (20??)"""
     def __init__(
@@ -378,6 +394,7 @@ class HarmonicCQT(nn.Module):
             n_bins: int = 84,
             center_bins: bool = True,
             gamma: int = 0,
+            streaming: bool = False,
             mirror: float = 0.
     ):
         super(HarmonicCQT, self).__init__()
@@ -387,7 +404,8 @@ class HarmonicCQT(nn.Module):
 
         self.cqt_kernels = nn.ModuleList([
             CQT(sr=sr, hop_length=hop_length, fmin=h * fmin, fmax=fmax, n_bins=n_bins,
-                bins_per_octave=12*bins_per_semitone, gamma=gamma, mirror=mirror, output_format="Complex")
+                bins_per_octave=12*bins_per_semitone, gamma=gamma,
+                streaming=streaming, mirror=mirror, output_format="Complex")
             for h in harmonics
         ])
 
@@ -407,9 +425,12 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     sr = 48000
+    hop = sr // 100
     params = dict(
         sr=sr,
-        hop_length=480,
+        n_bins=296,
+        bins_per_octave=36,
+        hop_length=hop,
         gamma=0,
     )
 
@@ -417,9 +438,10 @@ if __name__ == "__main__":
     f = torch.linspace(110., 440., 2 * sr)
     x = torch.sin(2 * np.pi * f * t)
     # x = torch.sin(880 * t)
-    kw = RegularCQT(**params).kernel_width // 2
+    kw = CQT(**params).kernel_width // 2
+    print("kw", kw)
     y1 = NNAudioCQT(**params)(x)
-    y2 = RegularCQT(**params)(x)
+    y2 = CQT(**params)(x)
     samples = min(y1.size(-1), y2.size(-1))
 
     print(y1.size(), y2.size())
@@ -433,9 +455,9 @@ if __name__ == "__main__":
     except AssertionError as e:
         print(e)
 
-    y2 = RegularCQT(**params)(F.pad(x, (kw, 0)))
-    cqt = StreamingCQT(**params, mirror=0.)
-    y3 = torch.cat([cqt(c) for c in F.pad(x, (480, kw-64)).split(params["hop_length"])], dim=-1)
+    y2 = CQT(**params, mirror=0.)(F.pad(x, (kw, 0)))
+    cqt = CQT(**params, streaming=True, mirror=0.)
+    y3 = torch.cat([cqt(c) for c in F.pad(x, (hop, kw + (x.size(-1) + kw) % hop)).split(hop)], dim=-1)
     try:
         torch.testing.assert_close(y2, y3)
     except AssertionError as e:

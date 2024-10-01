@@ -14,16 +14,22 @@ from pesto import load_model
 
 
 if __name__ == "__main__":
-    CHUNKSIZE = 480
     # FORMAT = pyaudio.paFloat32
     CHANNELS = 1
     RATE = 48000
-    BUFFER_SIZE = CHUNKSIZE
-    N_BUF = np.ceil(BUFFER_SIZE / CHUNKSIZE)
+    STEP_SIZE = 10.
+    CHUNK_SIZE = int(STEP_SIZE * RATE / 1000 + 0.5)
+    BUFFER_SIZE = CHUNK_SIZE
+    N_BUF = np.ceil(BUFFER_SIZE / CHUNK_SIZE)
 
     device = "cpu"
     # cc.use_cached_conv(True)
-    pesto_model = load_model("mir-1k", step_size=10., sampling_rate=RATE).to(device)
+    pesto_model = load_model("mir-1k",
+                             step_size=STEP_SIZE,
+                             sampling_rate=RATE,
+                             gamma=5,
+                             streaming=True,
+                             mirror=0.).to(device)
 
     # p = pyaudio.PyAudio()
     buffer = bytearray(BUFFER_SIZE)
@@ -51,7 +57,7 @@ if __name__ == "__main__":
             #     #compute energy of signal
             #     buffers.append(chunk)
             #     so_far = 0
-            chunk = os.urandom(CHUNKSIZE)
+            chunk = os.urandom(CHUNK_SIZE)
 
             buffer[:] = chunk
 
@@ -72,7 +78,6 @@ if __name__ == "__main__":
             #predictions,confidence,activations = pesto_model(buffer,RATE)
             tbuffer = tbuffer.to(device)
             #a,b = pesto_model(tbuffer,RATE)
-            # print(tbuffer.shape)
             f0, conf = pesto_model(tbuffer, convert_to_freq=False, return_activations=False)
 
             # log frequencies and speed in FPS
@@ -84,6 +89,3 @@ if __name__ == "__main__":
                 end = time.time()
                 print(end - start)
                 break
-            #print(amp)
-            # client.send_message("/note", [f0[len(f0)-1].item(), amp])
-            # break

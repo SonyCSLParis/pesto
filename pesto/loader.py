@@ -9,7 +9,8 @@ from .model import PESTO, Resnet1d
 
 def load_model(checkpoint: str,
                step_size: float,
-               sampling_rate: Optional[int] = None) -> PESTO:
+               sampling_rate: Optional[int] = None,
+               **hcqt_kwargs) -> PESTO:
     r"""Load a trained model from a checkpoint file.
     See https://github.com/SonyCSLParis/pesto-full/blob/master/src/models/pesto.py for the structure of the checkpoint.
 
@@ -31,8 +32,9 @@ def load_model(checkpoint: str,
     # load checkpoint
     checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
     hparams = checkpoint["hparams"]
-    hcqt_params = checkpoint["hcqt_params"]
     state_dict = checkpoint["state_dict"]
+    hcqt_params = checkpoint["hcqt_params"]
+    hcqt_params.update(hcqt_kwargs)
 
     # instantiate preprocessor
     preprocessor = Preprocessor(hop_size=step_size, sampling_rate=sampling_rate, **hcqt_params)

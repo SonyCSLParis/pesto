@@ -82,7 +82,6 @@ if __name__ == "__main__":
             i += 1
             if i % 1 == 0:
                 print(*[f'{s:.3f}' for s in (vol.item(), f0.item(), i / (time.time() - start))], sep='   ')
-
             if i == 500:
                 end = time.time()
                 print(end - start)

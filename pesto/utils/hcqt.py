@@ -13,8 +13,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nnAudio.utils import create_cqt_kernels
-
 
 def broadcast_dim(x):
     """
@@ -80,77 +78,81 @@ def get_window_dispatch(window, N, fftbins=True):
         )
 
 
-# def create_cqt_kernels(
-#         Q,
-#         fs,
-#         fmin: float,
-#         n_bins=84,
-#         bins_per_octave=12,
-#         norm=1,
-#         window="hann",
-#         fmax: Optional[float] = None,
-#         topbin_check=True,
-#         gamma=0,
-#         pad_fft=True
-# ):
-#     """
-#     Automatically create CQT kernels in time domain
-#     """
-#     if (fmax is not None) and (n_bins is None):
-#         n_bins = np.ceil(
-#             bins_per_octave * np.log2(fmax / fmin)
-#         )  # Calculate the number of bins
-#         freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
-#
-#     elif (fmax is None) and (n_bins is not None):
-#         freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
-#
-#     else:
-#         warnings.warn("If fmax is given, n_bins will be ignored", SyntaxWarning)
-#         n_bins = np.ceil(
-#             bins_per_octave * np.log2(fmax / fmin)
-#         )  # Calculate the number of bins
-#         freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
-#
-#     if np.max(freqs) > fs / 2 and topbin_check:
-#         raise ValueError(
-#             "The top bin {}Hz has exceeded the Nyquist frequency, \
-#                           please reduce the n_bins".format(
-#                 np.max(freqs)
-#             )
-#         )
-#
-#     alpha = 2.0 ** (1.0 / bins_per_octave) - 1.0
-#     lengths = np.ceil(Q * fs / (freqs + gamma / alpha))
-#
-#     # get max window length depending on gamma value
-#     max_len = int(max(lengths))
-#     fftLen = int(2 ** (np.ceil(np.log2(max_len))))
-#
-#     tempKernel = np.zeros((int(n_bins), int(fftLen)), dtype=np.complex64)
-#     specKernel = np.zeros((int(n_bins), int(fftLen)), dtype=np.complex64)
-#
-#     for k in range(0, int(n_bins)):
-#         freq = freqs[k]
-#         l = lengths[k]
-#
-#         # Centering the kernels
-#         if l % 2 == 1:  # pad more zeros on RHS
-#             start = int(np.ceil(fftLen / 2.0 - l / 2.0)) - 1
-#         else:
-#             start = int(np.ceil(fftLen / 2.0 - l / 2.0))
-#
-#         window_dispatch = get_window_dispatch(window, int(l), fftbins=True)
-#         sig = window_dispatch * np.exp(np.r_[-l // 2: l // 2] * 1j * 2 * np.pi * freq / fs) / l
-#
-#         if norm:  # Normalizing the filter # Trying to normalize like librosa
-#             tempKernel[k, start: start + int(l)] = sig / np.linalg.norm(sig, norm)
-#         else:
-#             tempKernel[k, start: start + int(l)] = sig
-#         # specKernel[k, :] = fft(tempKernel[k])
-#
-#     # return specKernel[:,:fftLen//2+1], fftLen, torch.tensor(lenghts).float()
-#     return tempKernel, fftLen, torch.tensor(lengths).float(), freqs
+def create_cqt_kernels(
+        Q,
+        fs,
+        fmin,
+        n_bins=84,
+        bins_per_octave=12,
+        norm=1,
+        window="hann",
+        fmax=None,
+        topbin_check=True,
+        gamma=0,
+        pad_fft=True
+):
+    """
+    Automatically create CQT kernels in time domain
+    """
+
+    fftLen = 2 ** nextpow2(np.ceil(Q * fs / fmin))
+    # minWin = 2**nextpow2(np.ceil(Q * fs / fmax))
+
+    if (fmax != None) and (n_bins == None):
+        n_bins = np.ceil(
+            bins_per_octave * np.log2(fmax / fmin)
+        )  # Calculate the number of bins
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
+
+    elif (fmax == None) and (n_bins != None):
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
+
+    else:
+        warnings.warn("If fmax is given, n_bins will be ignored", SyntaxWarning)
+        n_bins = np.ceil(
+            bins_per_octave * np.log2(fmax / fmin)
+        )  # Calculate the number of bins
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
+
+    if np.max(freqs) > fs / 2 and topbin_check == True:
+        raise ValueError(
+            "The top bin {}Hz has exceeded the Nyquist frequency, \
+                          please reduce the n_bins".format(
+                np.max(freqs)
+            )
+        )
+
+    alpha = 2.0 ** (1.0 / bins_per_octave) - 1.0
+    lengths = np.ceil(Q * fs / (freqs + gamma / alpha))
+
+    # get max window length depending on gamma value
+    max_len = int(max(lengths))
+    fftLen = int(2 ** (np.ceil(np.log2(max_len))))
+
+    tempKernel = np.zeros((int(n_bins), int(fftLen)), dtype=np.complex64)
+    specKernel = np.zeros((int(n_bins), int(fftLen)), dtype=np.complex64)
+
+    for k in range(0, int(n_bins)):
+        freq = freqs[k]
+        l = lengths[k]
+
+        # Centering the kernels
+        if l % 2 == 1:  # pad more zeros on RHS
+            start = int(np.ceil(fftLen / 2.0 - l / 2.0)) - 1
+        else:
+            start = int(np.ceil(fftLen / 2.0 - l / 2.0))
+
+        window_dispatch = get_window_dispatch(window, int(l), fftbins=True)
+        sig = window_dispatch * np.exp(np.r_[-l // 2: l // 2] * 1j * 2 * np.pi * freq / fs) / l
+
+        if norm:  # Normalizing the filter # Trying to normalize like librosa
+            tempKernel[k, start: start + int(l)] = sig / np.linalg.norm(sig, norm)
+        else:
+            tempKernel[k, start: start + int(l)] = sig
+        # specKernel[k, :] = fft(tempKernel[k])
+
+    # return specKernel[:,:fftLen//2+1], fftLen, torch.tensor(lenghts).float()
+    return tempKernel, fftLen, torch.tensor(lengths).float(), freqs
 
 
 class NNAudioCQT(nn.Module):

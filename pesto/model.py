@@ -1,4 +1,5 @@
 from functools import partial
+from math import log
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
@@ -8,7 +9,10 @@ from .utils import CropCQT
 from .utils import reduce_activations
 
 
-OUTPUT_TYPE = Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+OUTPUT_TYPE = Union[
+    Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+]
 
 
 class ToeplitzLinear(nn.Conv1d):
@@ -57,7 +61,8 @@ class Resnet1d(nn.Module):
                  output_dim=128,
                  activation_fn: str = "leaky",
                  a_lrelu=0.3,
-                 p_dropout=0.2):
+                 p_dropout=0.2,
+                 **unused):
         super(Resnet1d, self).__init__()
 
         self.hparams = dict(n_chan_input=n_chan_input,
@@ -138,6 +143,10 @@ class Resnet1d(nn.Module):
         Args:
             x (torch.Tensor): shape (batch, channels, freq_bins)
         """
+        # 1. compute (log-)energy of the signal
+        vol = torch.logsumexp(x / 10, dim=-1).sum(dim=-1).mul_(10 / log(10))
+
+        # 2. compute pitch predictions
         x = self.layernorm(x)
 
         x = self.conv1(x)
@@ -154,7 +163,7 @@ class Resnet1d(nn.Module):
 
         y_pred = self.fc(x)
 
-        return self.final_norm(y_pred)
+        return vol, self.final_norm(y_pred)
 
 
 class PESTO(nn.Module):
@@ -211,7 +220,7 @@ class PESTO(nn.Module):
         if batch_size:
             x = x.flatten(0, 1)
 
-        activations = self.encoder(x)
+        vol, activations = self.encoder(x)
         if batch_size:
             activations = activations.view(batch_size, -1, activations.size(-1))
 
@@ -223,9 +232,9 @@ class PESTO(nn.Module):
             preds = 440 * 2 ** ((preds - 69) / 12)
 
         if return_activations:
-            return preds, confidence, activations
+            return vol, preds, confidence, activations
 
-        return preds, confidence
+        return vol, preds, confidence
 
     @property
     def bins_per_semitone(self) -> int:

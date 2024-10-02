@@ -23,11 +23,9 @@ if __name__ == "__main__":
     N_BUF = np.ceil(BUFFER_SIZE / CHUNK_SIZE)
 
     device = "cpu"
-    # cc.use_cached_conv(True)
-    pesto_model = load_model("mir-1k",
+    pesto_model = load_model("mir-1k_g5",
                              step_size=STEP_SIZE,
                              sampling_rate=RATE,
-                             gamma=5,
                              streaming=True,
                              mirror=0.).to(device)
 
@@ -78,12 +76,12 @@ if __name__ == "__main__":
             #predictions,confidence,activations = pesto_model(buffer,RATE)
             tbuffer = tbuffer.to(device)
             #a,b = pesto_model(tbuffer,RATE)
-            f0, conf = pesto_model(tbuffer, convert_to_freq=False, return_activations=False)
+            vol, f0, conf = pesto_model(tbuffer, convert_to_freq=True, return_activations=False)
 
             # log frequencies and speed in FPS
             i += 1
-            if i % 10 == 0:
-                print(f0, i / (time.time() - start))
+            if i % 1 == 0:
+                print(*[f'{s:.3f}' for s in (vol.item(), f0.item(), i / (time.time() - start))], sep='   ')
 
             if i == 500:
                 end = time.time()

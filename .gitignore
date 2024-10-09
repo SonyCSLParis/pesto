@@ -4,7 +4,9 @@
 .DS_Store
 dist/
 build/
+logs/
 
 **/*.csv
 **/*.mid
 **/*.png
+**/*.pdf

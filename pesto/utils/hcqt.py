@@ -429,11 +429,13 @@ if __name__ == "__main__":
     sr = 48000
     hop = sr // 100
     params = dict(
+        fmin=55.,
+        # fmax=10.0,
         sr=sr,
         n_bins=296,
         bins_per_octave=36,
         hop_length=hop,
-        gamma=0,
+        gamma=5,
     )
 
     t = torch.arange(2 * sr).float().div_(sr)

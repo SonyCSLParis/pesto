@@ -2,7 +2,6 @@ r"""Cached convolutions. Original code from Antoine Caillon (former IRCAM).
 See https://github.com/acids-ircam/cached_conv/tree/master"""
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class CachedPadding1d(nn.Module):

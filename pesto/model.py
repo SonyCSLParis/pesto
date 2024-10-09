@@ -4,6 +4,7 @@ from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .utils import CropCQT
 from .utils import reduce_activations
@@ -143,10 +144,8 @@ class Resnet1d(nn.Module):
         Args:
             x (torch.Tensor): shape (batch, channels, freq_bins)
         """
-        # 1. compute (log-)energy of the signal
-        vol = torch.logsumexp(x / 10, dim=-1).sum(dim=-1).mul_(10 / log(10))
 
-        # 2. compute pitch predictions
+        # compute pitch predictions
         x = self.layernorm(x)
 
         x = self.conv1(x)
@@ -163,7 +162,22 @@ class Resnet1d(nn.Module):
 
         y_pred = self.fc(x)
 
-        return vol, self.final_norm(y_pred)
+        return self.final_norm(y_pred)
+
+
+class ConfidenceClassifier(nn.Module):
+    def __init__(self):
+        super(ConfidenceClassifier, self).__init__()
+        self.conv = nn.Conv1d(1, 1, 39, stride=3)
+        self.linear = nn.Linear(48, 1)
+
+    def forward(self, x):
+        geometric_mean = x.log().mean(dim=-1, keepdim=True).exp()
+        artithmetric_mean = x.mean(dim=-1, keepdim=True).clip_(min=1e-8)
+        flatness = geometric_mean / artithmetric_mean
+
+        x = F.relu(self.conv(x.unsqueeze(1)).squeeze(1))
+        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1)))
 
 
 class PESTO(nn.Module):
@@ -175,6 +189,9 @@ class PESTO(nn.Module):
         super(PESTO, self).__init__()
         self.encoder = encoder
         self.preprocessor = preprocessor
+
+        # TODO: make this clean
+        self.confidence = ConfidenceClassifier()
 
         # crop CQT
         if crop_kwargs is None:
@@ -190,7 +207,7 @@ class PESTO(nn.Module):
                 audio_waveforms: torch.Tensor,
                 sr: Optional[int] = None,
                 convert_to_freq: bool = False,
-                return_activations: bool = False) -> OUTPUT_TYPE:
+                return_activations: bool = True) -> OUTPUT_TYPE:
         r"""
 
         Args:
@@ -209,19 +226,27 @@ class PESTO(nn.Module):
         """
         batch_size = audio_waveforms.size(0) if audio_waveforms.ndim == 2 else None
         x = self.preprocessor(audio_waveforms, sr=sr)
+
+        # compute volume and confidence
+        energy = x.mul_(log(10) / 10.).exp().squeeze_(1)
+        vol = energy.sum(dim=-1)  # .log10_().mul_(20)
+
+        confidence = self.confidence(energy)
+
         x = self.crop_cqt(x)  # the CQT has to be cropped beforehand
 
-        # for now, confidence is computed very naively just based on energy in the CQT
-        confidence = x.mean(dim=-2).max(dim=-1).values
-        conf_min, conf_max = confidence.min(dim=-1, keepdim=True).values, confidence.max(dim=-1, keepdim=True).values
-        confidence = (confidence - conf_min) / (conf_max - conf_min)
+
+        # # compute CQT based on Wiener entropy
+        # geometric_mean = x.mean(dim=-1).mul(log(10) / 20).exp()
+        # artithmetric_mean = x.mul(log(10) / 20).exp().mean(dim=-1).clip_(min=1e-8)
+        # confidence = 1 - geometric_mean / artithmetric_mean
 
         # flatten batch_size and time_steps since anyway predictions are made on CQT frames independently
         if batch_size:
             x = x.flatten(0, 1)
 
-        vol, activations = self.encoder(x)
-        if batch_size:
+        activations = self.encoder(x)
+        if batch_size:  # TODO: unflatten maybe?
             activations = activations.view(batch_size, -1, activations.size(-1))
 
         activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
@@ -232,9 +257,9 @@ class PESTO(nn.Module):
             preds = 440 * 2 ** ((preds - 69) / 12)
 
         if return_activations:
-            return vol, preds, confidence, activations
+            return preds, confidence, vol, activations
 
-        return vol, preds, confidence
+        return preds, confidence, vol
 
     @property
     def bins_per_semitone(self) -> int:

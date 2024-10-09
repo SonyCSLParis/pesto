@@ -9,8 +9,10 @@ MIRROR = 1.
 
 CHUNK_SIZE = int(STEP_SIZE * SAMPLING_RATE / 1000 + 0.5)
 
+CHECKPOINT_NAME = "mir-1k_g5_conf"
+SCRIPT_NAME = "1009.pt"
 
-model = load_model("/home/alain/code/pesto/logs/HCQT/checkpoints/HCQT-0227cc80/last.ckpt",
+model = load_model(CHECKPOINT_NAME,
                    step_size=STEP_SIZE,
                    sampling_rate=SAMPLING_RATE,
                    streaming=True,
@@ -24,11 +26,11 @@ example_input = torch.randn(CHUNK_SIZE).clip(-1, 1)  # Modify according to your 
 traced_model = torch.jit.trace(model, example_input)
 
 # Save the traced model to a file
-traced_model.save("1004.pt")
-print("Model successfully exported as '1004.pt'")
+traced_model.save(SCRIPT_NAME)
+print(f"Model successfully exported as '{SCRIPT_NAME}'")
 
 # Load the exported TorchScript model
-loaded_model = torch.jit.load("1004.pt")
+loaded_model = torch.jit.load(SCRIPT_NAME)
 loaded_model.eval()  # Make sure it's in evaluation mode
 
 example_input = torch.randn(CHUNK_SIZE).clip(-1, 1)  # Modify according to your input shape

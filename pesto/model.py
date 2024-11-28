@@ -105,8 +105,8 @@ class Resnet1d(nn.Module):
             activation_layer(),
             nn.Dropout(p=p_dropout)
         )
-        self.n_prefilt_layers = n_prefilt_layers
-        self.prefilt_layers = nn.ModuleList(*[
+        self.n_prefilt_layers = n_prefilt_layers    
+        self.prefilt_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Conv1d(in_channels=n_ch[0],
                           out_channels=n_ch[0],

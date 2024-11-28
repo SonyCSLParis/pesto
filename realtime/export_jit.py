@@ -2,6 +2,12 @@ import torch
 
 from pesto import load_model
 
+
+class Dummy(torch.nn.Module):
+    def forward(self, x):
+        return torch.ones(())
+
+
 # options
 STEP_SIZE = 11.6
 SAMPLING_RATE = 44100
@@ -10,14 +16,15 @@ MIRROR = 1.
 CHUNK_SIZE = int(STEP_SIZE * SAMPLING_RATE / 1000 + 0.5)
 print(CHUNK_SIZE)
 
-CHECKPOINT_NAME = "mir-1k_g5_conf"
-SCRIPT_NAME = "1011.pt"
+CHECKPOINT_NAME = "mir-1k_g7_conf"
+SCRIPT_NAME = "1128.pt"
 
 model = load_model(CHECKPOINT_NAME,
                    step_size=STEP_SIZE,
                    sampling_rate=SAMPLING_RATE,
                    streaming=True,
                    mirror=MIRROR)
+# model.confidence = Dummy()
 model.eval()  # Set the model to evaluation mode
 
 # Example input for tracing (shape should match what your model expects)

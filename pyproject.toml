@@ -41,6 +41,9 @@ source = "https://github.com/SonyCSLParis/pesto"
 [tool.pytest.ini_options]
 testpaths = "tests/"
 
+[tool.setuptools]
+packages = ["pesto"]
+
 [tool.setuptools.dynamic]
 version = {attr = "pesto.__version__"}
 

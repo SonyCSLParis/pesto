@@ -15,6 +15,11 @@ import numpy as np
 from pesto import load_model
 
 
+class Dummy(torch.nn.Module):
+    def forward(self, x):
+        return 1.
+
+
 if __name__ == "__main__":
     CHUNKSIZE = 480
     # FORMAT = pyaudio.paFloat32
@@ -24,8 +29,14 @@ if __name__ == "__main__":
     N_BUF = int(BUFFER_SIZE/CHUNKSIZE) + 1
 
     device = "cpu"
-    # cc.use_cached_conv(True)
-    pesto_model = load_model("mir-1k", step_size=10., sampling_rate=RATE).to(device)
+    pesto_model = load_model("mir-1k_g7_conf",
+                             step_size=10.,
+                             sampling_rate=RATE,
+                             streaming=True,
+                             mirror=0.).to(device)
+
+    ## HACK: remove confidence because annoying
+    pesto_model.confidence = Dummy().to(device)
 
     # p = pyaudio.PyAudio()
     buffer = bytearray(BUFFER_SIZE)
@@ -42,18 +53,6 @@ if __name__ == "__main__":
     start = time.time()
     i = 0
     while True:
-        # print(stream.get_read_available())
-        # while stream.get_read_available() > CHUNKSIZE:
-        #     chunk = stream.read(CHUNKSIZE,exception_on_overflow=False)
-        #     if len(buffers) == N_BUF:
-        #         buffers.pop(0)
-        #
-        #     #print(chunk)
-        #
-        #
-        #     #compute energy of signal
-        #     buffers.append(chunk)
-        #     so_far = 0
         chunk = os.urandom(CHUNKSIZE)
         if len(buffers) == N_BUF:
             buffers.pop(0)
@@ -78,21 +77,16 @@ if __name__ == "__main__":
                 val = fa[k]
                 amp += val*val
 
-
-            #we have our N buffers
-            #print(chunk)
-
-            #tbuffer = torch.frombuffer(buffer,dtype=torch.int16).type(torch.float32)
             tbuffer = torch.frombuffer(buffer, dtype=torch.uint8).to(torch.float32)
             tbuffer.div_(256).sub_(0.5)
-            # print(buffer, tbuffer.shape)
-            #predictions,confidence,activations = pesto_model(buffer,RATE)
             tbuffer = tbuffer.to(device)
-            #a,b = pesto_model(tbuffer,RATE)
-            print(tbuffer.shape)
-            f0, conf = pesto_model(tbuffer, convert_to_freq=True, return_activations=False)
+
+            #### PESTO INFERENCE
+            f0, conf, vol = pesto_model(tbuffer, convert_to_freq=True, return_activations=False)
             i += 1
-            print(f0[-1].item(), i / (time.time() - start))#,conf)
+
+            if i % 100 == 0:
+                print(f0[-1].item(), i / (time.time() - start))#,conf)
             #print(amp)
             # client.send_message("/note", [f0[len(f0)-1].item(), amp])
             # break

@@ -3,14 +3,15 @@ import torch
 from pesto import load_model
 
 # options
-STEP_SIZE = 20.
-SAMPLING_RATE = 48000
+STEP_SIZE = 11.6
+SAMPLING_RATE = 44100
 MIRROR = 1.
 
 CHUNK_SIZE = int(STEP_SIZE * SAMPLING_RATE / 1000 + 0.5)
+print(CHUNK_SIZE)
 
 CHECKPOINT_NAME = "mir-1k_g5_conf"
-SCRIPT_NAME = "1009.pt"
+SCRIPT_NAME = "1011.pt"
 
 model = load_model(CHECKPOINT_NAME,
                    step_size=STEP_SIZE,

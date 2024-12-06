@@ -12,9 +12,10 @@ class CachedPadding1d(nn.Module):
     Compared to original implementation, we only consider mono signals and batch size 1.
     """
 
-    def __init__(self, padding, crop=False):
+    def __init__(self, padding, max_batch_size: int = 1, crop=False):
         super().__init__()
         self.padding = padding
+        self.max_batch_size = max_batch_size
         self.crop = crop
 
         self.init_cache()
@@ -22,12 +23,13 @@ class CachedPadding1d(nn.Module):
     @torch.jit.unused
     @torch.no_grad()
     def init_cache(self):
-        self.register_buffer("pad", torch.zeros(1, 1, self.padding), persistent=False)
+        self.register_buffer("pad", torch.zeros(self.max_batch_size, 1, self.padding), persistent=False)
 
     def forward(self, x):
+        bs = x.size(0)
         if self.padding:
-            x = torch.cat((self.pad, x), -1)
-            self.pad.copy_(x[..., -self.padding:])
+            x = torch.cat((self.pad[:bs], x), -1)
+            self.pad[:bs].copy_(x[..., -self.padding:])
 
         return x
 
@@ -38,6 +40,7 @@ class CachedConv1d(nn.Conv1d):
     """
     def __init__(self, *args, **kwargs):
         padding = kwargs.get("padding", 0)
+        max_batch_size = kwargs.pop("max_batch_size", 1)
         mirror = kwargs.pop("mirror", 0)
         cumulative_delay = kwargs.pop("cumulative_delay", 0)
 
@@ -60,8 +63,8 @@ class CachedConv1d(nn.Conv1d):
 
         self.cumulative_delay = (r_pad + stride_delay + cd) // s
 
-        self.cache = CachedPadding1d(padding)
-        self.downsampling_delay = CachedPadding1d(stride_delay, crop=True)
+        self.cache = CachedPadding1d(padding, max_batch_size=max_batch_size)
+        # self.downsampling_delay = CachedPadding1d(stride_delay, crop=True)
         self.mirror = nn.ReflectionPad1d((0, mirror)) if mirror > 0 else nn.Identity()
 
     def forward(self, x):

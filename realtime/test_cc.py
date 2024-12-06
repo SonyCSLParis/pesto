@@ -74,13 +74,13 @@ if __name__ == "__main__":
     XLIM = int(len(audio) / CHUNK_SIZE + 0.5 if audio is not None else 3 * 100 * STEP_SIZE)
 
     device = "cpu"
-    pesto_model = load_model("mir-1k_g7_conf",  #"/home/alain/code/pesto/logs/HCQT/checkpoints/HCQT-0227cc80/last.ckpt",
+    pesto_model = load_model("mir-1k_g5_conf",  #"/home/alain/code/pesto/logs/HCQT/checkpoints/HCQT-0227cc80/last.ckpt",
                              step_size=STEP_SIZE,
                              sampling_rate=RATE,
                              streaming=True,
                              mirror=0.).to(device)
 
-    if True:
+    if False:
         class Dummy(torch.nn.Module):
             def forward(self, x):
                 return torch.zeros(())

@@ -293,6 +293,16 @@ class BaseCQT(nn.Module):
         self.conv.weight.requires_grad = self.trainable
 
     def forward(self, x, output_format=None, normalization_type="librosa"):
+        r"""Computes the Constant-Q Transform
+
+        Args:
+            x (torch.Tensor): input audio waveform, shape (batch_size?, num_samples)
+            output_format (str, optional): "Magnitude" or "Complex"
+            normalization_type (str, optional): "librosa" or "convolutional"
+
+        Returns:
+            torch.Tensor: CQT, shape (batch_size, num_freqs, num_timesteps, 2?)
+        """
         output_format = output_format or self.output_format
 
         x = broadcast_dim(x)
@@ -317,7 +327,7 @@ class BaseCQT(nn.Module):
             return cqt.pow(2).sum(-3).add(margin).sqrt()
 
         if output_format == "Complex":
-            return cqt.permute(0, 2, 3, 1)
+            return cqt.permute(0, 2, 3, 1)  # shape: (batch_size, n_bins, n_timesteps, 2)
 
         cqt_real, cqt_imag = cqt.split(self.n_bins, dim=-2)
         if output_format == "Phase":
@@ -346,7 +356,11 @@ class RegularCQT(BaseCQT):
 
 
 class StreamingCQT(BaseCQT):
-    def __init__(self, *args, mirror=0., **kwargs):
+    def __init__(self,
+                 *args,
+                 mirror: float = 0.,
+                 max_batch_size: int = 1,
+                 **kwargs):
         super(StreamingCQT, self).__init__(*args, **kwargs)
 
         if self.center:
@@ -362,6 +376,7 @@ class StreamingCQT(BaseCQT):
                                     stride=self.hop_length,
                                     padding=padding,
                                     mirror=mirrored_samples,
+                                    max_batch_size=max_batch_size,
                                     bias=False)
 
         self.init_weights()
@@ -369,7 +384,7 @@ class StreamingCQT(BaseCQT):
 
 class CQT:
     regular_only_kwargs = ["pad_mode"]
-    streaming_only_kwargs = ["mirror"]
+    streaming_only_kwargs = ["mirror", "max_batch_size"]
 
     def __new__(cls, *args, **kwargs):
         streaming = kwargs.pop("streaming", False)
@@ -397,7 +412,8 @@ class HarmonicCQT(nn.Module):
             center_bins: bool = True,
             gamma: int = 0,
             streaming: bool = False,
-            mirror: float = 0.
+            mirror: float = 0.,
+            max_batch_size: int = 1
     ):
         super(HarmonicCQT, self).__init__()
 
@@ -407,7 +423,8 @@ class HarmonicCQT(nn.Module):
         self.cqt_kernels = nn.ModuleList([
             CQT(sr=sr, hop_length=hop_length, fmin=h * fmin, fmax=fmax, n_bins=n_bins,
                 bins_per_octave=12*bins_per_semitone, gamma=gamma,
-                streaming=streaming, mirror=mirror, output_format="Complex")
+                streaming=streaming, mirror=mirror, max_batch_size=max_batch_size,
+                output_format="Complex")
             for h in harmonics
         ])
 

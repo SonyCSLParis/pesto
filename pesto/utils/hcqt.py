@@ -370,6 +370,7 @@ class StreamingCQT(BaseCQT):
             mirrored_samples = 0
             padding = 0
 
+        print("kw", self.kernel_width, self.hop_length)
         self.conv = cc.CachedConv1d(1,
                                     2 * self.n_bins,
                                     kernel_size=self.kernel_width,

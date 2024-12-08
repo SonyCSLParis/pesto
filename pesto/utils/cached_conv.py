@@ -42,6 +42,7 @@ class CachedConv1d(nn.Conv1d):
         padding = kwargs.get("padding", 0)
         max_batch_size = kwargs.pop("max_batch_size", 1)
         mirror = kwargs.pop("mirror", 0)
+        mirror_fn = kwargs.pop("mirror_fn", "reflection")
         cumulative_delay = kwargs.pop("cumulative_delay", 0)
 
         kwargs["padding"] = 0
@@ -65,7 +66,8 @@ class CachedConv1d(nn.Conv1d):
 
         self.cache = CachedPadding1d(padding, max_batch_size=max_batch_size)
         # self.downsampling_delay = CachedPadding1d(stride_delay, crop=True)
-        self.mirror = nn.ReflectionPad1d((0, mirror)) if mirror > 0 else nn.Identity()
+        mirroring_fn = nn.ReflectionPad1d if mirror_fn == "reflection" else nn.ZeroPad1d
+        self.mirror = mirroring_fn((0, mirror)) if mirror > 0 else nn.Identity()
 
     def forward(self, x):
         # x = self.downsampling_delay(x)  NOTE: not sure we actually need this thing

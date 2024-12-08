@@ -28,7 +28,7 @@ model = load_model(CHECKPOINT_NAME,
 model.eval()  # Set the model to evaluation mode
 
 # Example input for tracing (shape should match what your model expects)
-example_input = torch.randn(3, CHUNK_SIZE).clip(-1, 1)  # Modify according to your input shape
+example_input = torch.randn(3, CHUNK_SIZE+20).clip(-1, 1)  # Modify according to your input shape
 
 # Export the model using torch.jit.trace
 traced_model = torch.jit.trace(model, example_input)

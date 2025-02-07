@@ -1,7 +1,18 @@
 r"""Cached convolutions. Original code from Antoine Caillon (former IRCAM).
 See https://github.com/acids-ircam/cached_conv/tree/master"""
+from typing import Tuple
+
 import torch
 import torch.nn as nn
+
+
+class RefillPad1d(nn.Module):
+    def __init__(self, padding: Tuple[int, int]):
+        super(RefillPad1d, self).__init__()
+        self.right_padding = padding[1]
+
+    def forward(self, x):
+        return torch.cat((x, x[..., -self.right_padding:]), dim=-1)
 
 
 class CachedPadding1d(nn.Module):
@@ -42,7 +53,7 @@ class CachedConv1d(nn.Conv1d):
         padding = kwargs.get("padding", 0)
         max_batch_size = kwargs.pop("max_batch_size", 1)
         mirror = kwargs.pop("mirror", 0)
-        mirror_fn = kwargs.pop("mirror_fn", "reflection")
+        mirror_fn = kwargs.pop("mirror_fn", "zeros")
         cumulative_delay = kwargs.pop("cumulative_delay", 0)
 
         kwargs["padding"] = 0
@@ -66,8 +77,19 @@ class CachedConv1d(nn.Conv1d):
 
         self.cache = CachedPadding1d(padding, max_batch_size=max_batch_size)
         # self.downsampling_delay = CachedPadding1d(stride_delay, crop=True)
-        mirroring_fn = nn.ReflectionPad1d if mirror_fn == "reflection" else nn.ZeroPad1d
-        self.mirror = mirroring_fn((0, mirror)) if mirror > 0 else nn.Identity()
+
+        if mirror == 0:
+            mirroring_fn = nn.Identity
+        elif mirror_fn == "reflection":
+            mirroring_fn = nn.ReflectionPad1d
+        elif mirror_fn == "zeros":
+            mirroring_fn = nn.ZeroPad1d
+        elif mirror_fn == "refill":
+            mirroring_fn = RefillPad1d
+        else:
+            mirroring_fn = nn.Identity
+
+        self.mirror = mirroring_fn((0, mirror))
 
     def forward(self, x):
         # x = self.downsampling_delay(x)  NOTE: not sure we actually need this thing

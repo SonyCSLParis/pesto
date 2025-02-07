@@ -166,10 +166,14 @@ class Resnet1d(nn.Module):
 
 
 class ConfidenceClassifier(nn.Module):
+    r"""A simple pre-trained classifier that returns whether a sample is voiced or not
+
+    # TODO: add args for this module, it should not be hardcoded
+    """
     def __init__(self):
         super(ConfidenceClassifier, self).__init__()
         self.conv = nn.Conv1d(1, 1, 39, stride=3)
-        self.linear = nn.Linear(48, 1)
+        self.linear = nn.Linear(72, 1)
 
     def forward(self, x):
         geometric_mean = x.log().mean(dim=-1, keepdim=True).exp()

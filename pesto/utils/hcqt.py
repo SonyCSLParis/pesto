@@ -1,4 +1,4 @@
-r"""The implementation of the CQTOld comes from the nnAudio repository: https://github.com/KinWaiCheuk/nnAudio
+r"""The implementation of the CQT comes from the nnAudio repository: https://github.com/KinWaiCheuk/nnAudio
 Due to conflicts between some versions of NumPy and nnAudio, we use the implementation as is instead of adding nnAudio
 to the requirements of this project. Compared to the original implementation, some minor modifications have been done
 in the code, however the behaviour remains the same.
@@ -155,99 +155,6 @@ def create_cqt_kernels(
     return tempKernel, fftLen, torch.tensor(lengths).float(), freqs
 
 
-class NNAudioCQT(nn.Module):
-    def __init__(
-            self,
-            sr=22050,
-            hop_length=512,
-            fmin=32.70,
-            fmax=None,
-            n_bins=84,
-            bins_per_octave=12,
-            gamma=0,
-            filter_scale=1,
-            norm=1,
-            window="hann",
-            center=True,
-            pad_mode="reflect",
-            trainable=False,
-            output_format="Magnitude"
-    ):
-
-        super().__init__()
-
-        self.trainable = trainable
-        self.hop_length = hop_length
-        self.center = center
-        self.pad_mode = pad_mode
-        self.output_format = output_format
-
-        # creating kernels for CQT
-        Q = float(filter_scale) / (2 ** (1 / bins_per_octave) - 1)
-
-        cqt_kernels, self.kernel_width, lenghts, freqs = create_cqt_kernels(
-            Q, sr, fmin, n_bins, bins_per_octave, norm, window, fmax, gamma=gamma
-        )
-
-        self.register_buffer("lenghts", lenghts)
-        self.frequencies = freqs
-
-        cqt_kernels_real = torch.tensor(cqt_kernels.real).unsqueeze(1)
-        cqt_kernels_imag = torch.tensor(cqt_kernels.imag).unsqueeze(1)
-
-        if trainable:  # NOTE: can't it be factorized?
-            cqt_kernels_real = nn.Parameter(cqt_kernels_real, requires_grad=trainable)
-            cqt_kernels_imag = nn.Parameter(cqt_kernels_imag, requires_grad=trainable)
-            self.register_parameter("cqt_kernels_real", cqt_kernels_real)
-            self.register_parameter("cqt_kernels_imag", cqt_kernels_imag)
-        else:
-            self.register_buffer("cqt_kernels_real", cqt_kernels_real)
-            self.register_buffer("cqt_kernels_imag", cqt_kernels_imag)
-
-    def forward(self, x, output_format=None, normalization_type="librosa"):
-        output_format = output_format or self.output_format
-
-        x = broadcast_dim(x)
-        if self.center:
-            if self.pad_mode == "constant":
-                padding = nn.ConstantPad1d(self.kernel_width // 2, 0)
-            elif self.pad_mode == "reflect":
-                padding = nn.ReflectionPad1d(self.kernel_width // 2)
-
-            x = padding(x)
-
-        # CQT
-        print("1s", x.shape, x[..., 4050:4100])
-        CQT_real = F.conv1d(x, self.cqt_kernels_real, stride=self.hop_length)
-        CQT_imag = -F.conv1d(x, self.cqt_kernels_imag, stride=self.hop_length)
-
-        if normalization_type == "librosa":
-            CQT_real *= torch.sqrt(self.lenghts.view(-1, 1))
-            CQT_imag *= torch.sqrt(self.lenghts.view(-1, 1))
-        elif normalization_type == "convolutional":
-            pass
-        elif normalization_type == "wrap":
-            CQT_real *= 2
-            CQT_imag *= 2
-        else:
-            raise ValueError(
-                "The normalization_type %r is not part of our current options."
-                % normalization_type
-            )
-
-        if output_format == "Magnitude":
-            margin = 1e-8 if self.trainable else 0
-            return torch.sqrt(CQT_real.pow(2) + CQT_imag.pow(2) + margin)
-
-        elif output_format == "Complex":
-            return torch.stack((CQT_real, CQT_imag), -1)
-
-        elif output_format == "Phase":
-            phase_real = torch.cos(torch.atan2(CQT_imag, CQT_real))
-            phase_imag = torch.sin(torch.atan2(CQT_imag, CQT_real))
-            return torch.stack((phase_real, phase_imag), -1)
-
-
 class BaseCQT(nn.Module):
     def __init__(
             self,
@@ -370,7 +277,6 @@ class StreamingCQT(BaseCQT):
             mirrored_samples = 0
             padding = 0
 
-        print("kw", self.kernel_width, self.hop_length)
         self.conv = cc.CachedConv1d(1,
                                     2 * self.n_bins,
                                     kernel_size=self.kernel_width,
@@ -412,6 +318,7 @@ class HarmonicCQT(nn.Module):
             n_bins: int = 84,
             center_bins: bool = True,
             gamma: int = 0,
+            center: bool = True,
             streaming: bool = False,
             mirror: float = 0.,
             max_batch_size: int = 1
@@ -423,7 +330,7 @@ class HarmonicCQT(nn.Module):
 
         self.cqt_kernels = nn.ModuleList([
             CQT(sr=sr, hop_length=hop_length, fmin=h * fmin, fmax=fmax, n_bins=n_bins,
-                bins_per_octave=12*bins_per_semitone, gamma=gamma,
+                bins_per_octave=12*bins_per_semitone, gamma=gamma, center=center,
                 streaming=streaming, mirror=mirror, max_batch_size=max_batch_size,
                 output_format="Complex")
             for h in harmonics
@@ -439,55 +346,3 @@ class HarmonicCQT(nn.Module):
             Harmonic CQT, shape (batch_size, num_harmonics, num_freqs, num_timesteps, 2)
         """
         return torch.stack([cqt(audio_waveforms) for cqt in self.cqt_kernels], dim=1)
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    sr = 48000
-    hop = sr // 100
-    params = dict(
-        fmin=55.,
-        # fmax=10.0,
-        sr=sr,
-        n_bins=296,
-        bins_per_octave=36,
-        hop_length=hop,
-        gamma=5,
-    )
-
-    t = torch.arange(2 * sr).float().div_(sr)
-    f = torch.linspace(110., 440., 2 * sr)
-    x = torch.sin(2 * np.pi * f * t)
-    # x = torch.sin(880 * t)
-    kw = CQT(**params).kernel_width // 2
-    print("kw", kw)
-    y1 = NNAudioCQT(**params)(x)
-    y2 = CQT(**params)(x)
-    samples = min(y1.size(-1), y2.size(-1))
-
-    print(y1.size(), y2.size())
-    print(y1[0, 0, 50:100], y2[0, 0, 50:100])
-
-    # plt.imshow(torch.cat((y1[0], y2[0]), dim=-2).numpy(), cmap="inferno")
-    # plt.show()
-
-    try:
-        torch.testing.assert_close(y1, y2)
-    except AssertionError as e:
-        print(e)
-
-    y2 = CQT(**params, mirror=0.)(F.pad(x, (kw, 0)))
-    cqt = CQT(**params, streaming=True, mirror=0.)
-    y3 = torch.cat([cqt(c) for c in F.pad(x, (hop, kw + (x.size(-1) + kw) % hop)).split(hop)], dim=-1)
-    try:
-        torch.testing.assert_close(y2, y3)
-    except AssertionError as e:
-        print(e)
-        plt.imshow(torch.cat((y2[0], y3[0]), dim=-2).numpy(), cmap="inferno")
-        plt.show()
-        plt.imshow(torch.cat((y2[0], y3[0]), dim=-2).abs().log().numpy(), cmap="inferno")
-        plt.show()
-        plt.imshow((y2 - y3)[0].abs().log10().numpy(), cmap='inferno')
-        plt.colorbar()
-        plt.show()

@@ -58,12 +58,11 @@ class Preprocessor(nn.Module):
 
         Returns:
             torch.Tensor: log-magnitude CQT of batch of CQTs,
-                shape (batch_size?, num_timesteps, num_harmonics, num_freqs)
+                shape (batch_size, num_timesteps, num_harmonics, num_freqs)
         """
         # compute CQT from input waveform, and invert dims for (time_steps, num_harmonics, freq_bins)
         # in other words, time becomes the batch dimension, enabling efficient processing for long audios.
         complex_cqt = torch.view_as_complex(self.hcqt(x, sr=sr)).permute(0, 3, 1, 2)
-        complex_cqt.squeeze_(0)
 
         # convert to dB
         return self.to_log(complex_cqt)

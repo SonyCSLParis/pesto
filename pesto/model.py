@@ -1,14 +1,19 @@
 from functools import partial
+from math import log
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .utils import CropCQT
 from .utils import reduce_activations
 
 
-OUTPUT_TYPE = Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+OUTPUT_TYPE = Union[
+    Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+]
 
 
 class ToeplitzLinear(nn.Conv1d):
@@ -57,7 +62,8 @@ class Resnet1d(nn.Module):
                  output_dim=128,
                  activation_fn: str = "leaky",
                  a_lrelu=0.3,
-                 p_dropout=0.2):
+                 p_dropout=0.2,
+                 **unused):
         super(Resnet1d, self).__init__()
 
         self.hparams = dict(n_chan_input=n_chan_input,
@@ -100,7 +106,7 @@ class Resnet1d(nn.Module):
             nn.Dropout(p=p_dropout)
         )
         self.n_prefilt_layers = n_prefilt_layers
-        self.prefilt_layers = nn.ModuleList(*[
+        self.prefilt_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Conv1d(in_channels=n_ch[0],
                           out_channels=n_ch[0],
@@ -138,6 +144,8 @@ class Resnet1d(nn.Module):
         Args:
             x (torch.Tensor): shape (batch, channels, freq_bins)
         """
+
+        # compute pitch predictions
         x = self.layernorm(x)
 
         x = self.conv1(x)
@@ -157,6 +165,33 @@ class Resnet1d(nn.Module):
         return self.final_norm(y_pred)
 
 
+class ConfidenceClassifier(nn.Module):
+    r"""A simple pre-trained classifier that returns whether a sample is voiced or not
+
+    # TODO: add args for this module, it should not be hardcoded
+    """
+    def __init__(self):
+        super(ConfidenceClassifier, self).__init__()
+        self.conv = nn.Conv1d(1, 1, 39, stride=3)
+        self.linear = nn.Linear(72, 1)
+
+    def forward(self, x):
+        r"""Computes the confidence in [0, 1] that a frame is voiced or not
+
+        Args:
+            x (torch.Tensor): shape (batch_size, channels, freq_bins)
+
+        Returns:
+            torch.Tensor: confidence in [0, 1], shape (batch_size,)
+        """
+        geometric_mean = x.log().mean(dim=-1, keepdim=True).exp()
+        artithmetric_mean = x.mean(dim=-1, keepdim=True).clip_(min=1e-8)
+        flatness = geometric_mean / artithmetric_mean
+
+        x = F.relu(self.conv(x.unsqueeze(1)).squeeze(1))
+        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1))).squeeze(-1)
+
+
 class PESTO(nn.Module):
     def __init__(self,
                  encoder: nn.Module,
@@ -166,6 +201,9 @@ class PESTO(nn.Module):
         super(PESTO, self).__init__()
         self.encoder = encoder
         self.preprocessor = preprocessor
+
+        # TODO: make this clean
+        self.confidence = ConfidenceClassifier()
 
         # crop CQT
         if crop_kwargs is None:
@@ -181,7 +219,7 @@ class PESTO(nn.Module):
                 audio_waveforms: torch.Tensor,
                 sr: Optional[int] = None,
                 convert_to_freq: bool = False,
-                return_activations: bool = False) -> OUTPUT_TYPE:
+                return_activations: bool = True) -> OUTPUT_TYPE:
         r"""
 
         Args:
@@ -199,21 +237,24 @@ class PESTO(nn.Module):
             activations (torch.Tensor): activations of the model, shape (batch_size?, num_timesteps, output_dim)
         """
         batch_size = audio_waveforms.size(0) if audio_waveforms.ndim == 2 else None
-        x = self.preprocessor(audio_waveforms, sr=sr)
+        x = self.preprocessor(audio_waveforms, sr=sr).flatten(0, 1)
+
+        # compute volume and confidence
+        energy = x.mul_(log(10) / 10.).exp().squeeze_(1)
+        vol = energy.sum(dim=-1)  # .log10_().mul_(20)
+
+        confidence = self.confidence(energy)
+
         x = self.crop_cqt(x)  # the CQT has to be cropped beforehand
 
-        # for now, confidence is computed very naively just based on energy in the CQT
-        confidence = x.mean(dim=-2).max(dim=-1).values
-        conf_min, conf_max = confidence.min(dim=-1, keepdim=True).values, confidence.max(dim=-1, keepdim=True).values
-        confidence = (confidence - conf_min) / (conf_max - conf_min)
-
-        # flatten batch_size and time_steps since anyway predictions are made on CQT frames independently
-        if batch_size:
-            x = x.flatten(0, 1)
-
         activations = self.encoder(x)
-        if batch_size:
+
+        if batch_size is None:
+            confidence.squeeze_(0)
+        else:
             activations = activations.view(batch_size, -1, activations.size(-1))
+            confidence = confidence.view(batch_size, -1)
+            vol = vol.view(batch_size, -1)
 
         activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
 
@@ -223,9 +264,9 @@ class PESTO(nn.Module):
             preds = 440 * 2 ** ((preds - 69) / 12)
 
         if return_activations:
-            return preds, confidence, activations
+            return preds, confidence, vol, activations
 
-        return preds, confidence
+        return preds, confidence, vol
 
     @property
     def bins_per_semitone(self) -> int:

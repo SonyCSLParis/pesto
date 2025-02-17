@@ -5,8 +5,8 @@ in the code, however the behaviour remains the same.
 """
 from typing import Optional
 
+import pesto.utils.cached_conv as cc
 import numpy as np
-import warnings
 from scipy.signal import get_window
 
 import torch
@@ -81,12 +81,12 @@ def get_window_dispatch(window, N, fftbins=True):
 def create_cqt_kernels(
         Q,
         fs,
-        fmin: float,
+        fmin,
         n_bins=84,
         bins_per_octave=12,
         norm=1,
         window="hann",
-        fmax: Optional[float] = None,
+        fmax=None,
         topbin_check=True,
         gamma=0,
         pad_fft=True
@@ -94,23 +94,27 @@ def create_cqt_kernels(
     """
     Automatically create CQT kernels in time domain
     """
-    if (fmax is not None) and (n_bins is None):
+
+    fftLen = 2 ** nextpow2(np.ceil(Q * fs / fmin))
+    # minWin = 2**nextpow2(np.ceil(Q * fs / fmax))
+
+    if (fmax != None) and (n_bins == None):
         n_bins = np.ceil(
             bins_per_octave * np.log2(fmax / fmin)
         )  # Calculate the number of bins
-        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
 
-    elif (fmax is None) and (n_bins is not None):
-        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
+    elif (fmax == None) and (n_bins != None):
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
 
     else:
         warnings.warn("If fmax is given, n_bins will be ignored", SyntaxWarning)
         n_bins = np.ceil(
             bins_per_octave * np.log2(fmax / fmin)
         )  # Calculate the number of bins
-        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / float(bins_per_octave))
+        freqs = fmin * 2.0 ** (np.r_[0:n_bins] / np.double(bins_per_octave))
 
-    if np.max(freqs) > fs / 2 and topbin_check:
+    if np.max(freqs) > fs / 2 and topbin_check == True:
         raise ValueError(
             "The top bin {}Hz has exceeded the Nyquist frequency, \
                           please reduce the n_bins".format(
@@ -151,97 +155,7 @@ def create_cqt_kernels(
     return tempKernel, fftLen, torch.tensor(lengths).float(), freqs
 
 
-class CQT(nn.Module):
-    """This function is to calculate the CQT of the input signal.
-    Input signal should be in either of the following shapes.\n
-    1. ``(len_audio)``\n
-    2. ``(num_audio, len_audio)``\n
-    3. ``(num_audio, 1, len_audio)``
-
-    The correct shape will be inferred autommatically if the input follows these 3 shapes.
-    Most of the arguments follow the convention from librosa.
-    This class inherits from ``nn.Module``, therefore, the usage is same as ``nn.Module``.
-
-    This alogrithm uses the method proposed in [1]. I slightly modify it so that it runs faster
-    than the original 1992 algorithm, that is why I call it version 2.
-    [1] Brown, Judith C.C. and Miller Puckette. “An efficient algorithm for the calculation of a
-    constant Q transform.” (1992).
-
-    Parameters
-    ----------
-    sr : int
-        The sampling rate for the input audio. It is used to calucate the correct ``fmin`` and ``fmax``.
-        Setting the correct sampling rate is very important for calculating the correct frequency.
-
-    hop_length : int
-        The hop (or stride) size. Default value is 512.
-
-    fmin : float
-        The frequency for the lowest CQT bin. Default is 32.70Hz, which coresponds to the note C0.
-
-    fmax : float
-        The frequency for the highest CQT bin. Default is ``None``, therefore the higest CQT bin is
-        inferred from the ``n_bins`` and ``bins_per_octave``.
-        If ``fmax`` is not ``None``, then the argument ``n_bins`` will be ignored and ``n_bins``
-        will be calculated automatically. Default is ``None``
-
-    n_bins : int
-        The total numbers of CQT bins. Default is 84. Will be ignored if ``fmax`` is not ``None``.
-
-    bins_per_octave : int
-        Number of bins per octave. Default is 12.
-
-    filter_scale : float > 0
-        Filter scale factor. Values of filter_scale smaller than 1 can be used to improve the time resolution at the
-        cost of degrading the frequency resolution. Important to note is that setting for example filter_scale = 0.5 and
-        bins_per_octave = 48 leads to exactly the same time-frequency resolution trade-off as setting filter_scale = 1
-        and bins_per_octave = 24, but the former contains twice more frequency bins per octave. In this sense, values
-        filter_scale < 1 can be seen to implement oversampling of the frequency axis, analogously to the use of zero
-        padding when calculating the DFT.
-
-    norm : int
-        Normalization for the CQT kernels. ``1`` means L1 normalization, and ``2`` means L2 normalization.
-        Default is ``1``, which is same as the normalization used in librosa.
-
-    window : string, float, or tuple
-        The windowing function for CQT. If it is a string, It uses ``scipy.signal.get_window``. If it is a
-        tuple, only the gaussian window wanrantees constant Q factor. Gaussian window should be given as a
-        tuple ('gaussian', att) where att is the attenuation in the border given in dB.
-        Please refer to scipy documentation for possible windowing functions. The default value is 'hann'.
-
-    center : bool
-        Putting the CQT keneral at the center of the time-step or not. If ``False``, the time index is
-        the beginning of the CQT kernel, if ``True``, the time index is the center of the CQT kernel.
-        Default value if ``True``.
-
-    pad_mode : str
-        The padding method. Default value is 'reflect'.
-
-    trainable : bool
-        Determine if the CQT kernels are trainable or not. If ``True``, the gradients for CQT kernels
-        will also be caluclated and the CQT kernels will be updated during model training.
-        Default value is ``False``.
-
-    output_format : str
-        Determine the return type.
-        ``Magnitude`` will return the magnitude of the STFT result, shape = ``(num_samples, freq_bins,time_steps)``;
-        ``Complex`` will return the STFT result in complex number, shape = ``(num_samples, freq_bins,time_steps, 2)``;
-        ``Phase`` will return the phase of the STFT reuslt, shape = ``(num_samples, freq_bins,time_steps, 2)``.
-        The complex number is stored as ``(real, imag)`` in the last axis. Default value is 'Magnitude'.
-
-    Returns
-    -------
-    spectrogram : torch.Tensor
-    It returns a tensor of spectrograms.
-    shape = ``(num_samples, freq_bins,time_steps)`` if ``output_format='Magnitude'``;
-    shape = ``(num_samples, freq_bins,time_steps, 2)`` if ``output_format='Complex' or 'Phase'``;
-
-    Examples
-    --------
-    >>> spec_layer = CQT()
-    >>> specs = spec_layer(x)
-    """
-
+class BaseCQT(nn.Module):
     def __init__(
             self,
             sr=22050,
@@ -250,93 +164,65 @@ class CQT(nn.Module):
             fmax=None,
             n_bins=84,
             bins_per_octave=12,
+            gamma=0,
             filter_scale=1,
             norm=1,
             window="hann",
-            center=True,
-            pad_mode="reflect",
+            center: bool = True,
             trainable=False,
             output_format="Magnitude"
     ):
 
-        super().__init__()
+        super(BaseCQT, self).__init__()
 
         self.trainable = trainable
+        self.n_bins = n_bins
         self.hop_length = hop_length
         self.center = center
-        self.pad_mode = pad_mode
         self.output_format = output_format
 
         # creating kernels for CQT
         Q = float(filter_scale) / (2 ** (1 / bins_per_octave) - 1)
 
-        cqt_kernels, self.kernel_width, lenghts, freqs = create_cqt_kernels(
-            Q, sr, fmin, n_bins, bins_per_octave, norm, window, fmax
+        cqt_kernels, self.kernel_width, lengths, freqs = create_cqt_kernels(
+            Q, sr, fmin, n_bins, bins_per_octave, norm, window, fmax, gamma=gamma
         )
 
-        self.register_buffer("lenghts", lenghts)
+        self.register_buffer("sqrt_lengths", lengths.sqrt_().unsqueeze_(-1))
         self.frequencies = freqs
 
-        cqt_kernels_real = torch.tensor(cqt_kernels.real).unsqueeze(1)
-        cqt_kernels_imag = torch.tensor(cqt_kernels.imag).unsqueeze(1)
+        self.cqt_kernels = torch.from_numpy(cqt_kernels).unsqueeze(1)
 
-        if trainable:  # NOTE: can't it be factorized?
-            cqt_kernels_real = nn.Parameter(cqt_kernels_real, requires_grad=trainable)
-            cqt_kernels_imag = nn.Parameter(cqt_kernels_imag, requires_grad=trainable)
-            self.register_parameter("cqt_kernels_real", cqt_kernels_real)
-            self.register_parameter("cqt_kernels_imag", cqt_kernels_imag)
-        else:
-            self.register_buffer("cqt_kernels_real", cqt_kernels_real)
-            self.register_buffer("cqt_kernels_imag", cqt_kernels_imag)
+    @torch.no_grad()
+    def init_weights(self):
+        # initialize convolution layers
+        self.conv.weight.copy_(torch.cat((self.cqt_kernels.real, -self.cqt_kernels.imag), dim=0))
+        self.conv.weight.requires_grad = self.trainable
 
     def forward(self, x, output_format=None, normalization_type="librosa"):
-        """
-        Convert a batch of waveforms to CQT spectrograms.
+        r"""Computes the Constant-Q Transform
 
-        Parameters
-        ----------
-        x : torch tensor
-            Input signal should be in either of the following shapes.\n
-            1. ``(len_audio)``\n
-            2. ``(num_audio, len_audio)``\n
-            3. ``(num_audio, 1, len_audio)``
-            It will be automatically broadcast to the right shape
+        Args:
+            x (torch.Tensor): input audio waveform, shape (batch_size?, num_samples)
+            output_format (str, optional): "Magnitude" or "Complex"
+            normalization_type (str, optional): "librosa" or "convolutional"
 
-        normalization_type : str
-            Type of the normalization. The possible options are: \n
-            'librosa' : the output fits the librosa one \n
-            'convolutional' : the output conserves the convolutional inequalities of the wavelet transform:\n
-            for all p ϵ [1, inf] \n
-                - || CQT ||_p <= || f ||_p || g ||_1 \n
-                - || CQT ||_p <= || f ||_1 || g ||_p \n
-                - || CQT ||_2 = || f ||_2 || g ||_2 \n
-            'wrap' : wraps positive and negative frequencies into positive frequencies. This means that the CQT of a
-            sinus (or a cosine) with a constant amplitude equal to 1 will have the value 1 in the bin corresponding to
-            its frequency.
+        Returns:
+            torch.Tensor: CQT, shape (batch_size, num_freqs, num_timesteps, 2?)
         """
         output_format = output_format or self.output_format
 
         x = broadcast_dim(x)
-        if self.center:
-            if self.pad_mode == "constant":
-                padding = nn.ConstantPad1d(self.kernel_width // 2, 0)
-            elif self.pad_mode == "reflect":
-                padding = nn.ReflectionPad1d(self.kernel_width // 2)
-
-            x = padding(x)
 
         # CQT
-        CQT_real = F.conv1d(x, self.cqt_kernels_real, stride=self.hop_length)
-        CQT_imag = -F.conv1d(x, self.cqt_kernels_imag, stride=self.hop_length)
+        cqt = self.conv(x).view(x.size(0), 2, self.n_bins, -1)
 
         if normalization_type == "librosa":
-            CQT_real *= torch.sqrt(self.lenghts.view(-1, 1))
-            CQT_imag *= torch.sqrt(self.lenghts.view(-1, 1))
+            cqt *= self.sqrt_lengths
         elif normalization_type == "convolutional":
             pass
         elif normalization_type == "wrap":
-            CQT_real *= 2
-            CQT_imag *= 2
+            cqt *= 2
         else:
             raise ValueError(
                 "The normalization_type %r is not part of our current options."
@@ -345,15 +231,78 @@ class CQT(nn.Module):
 
         if output_format == "Magnitude":
             margin = 1e-8 if self.trainable else 0
-            return torch.sqrt(CQT_real.pow(2) + CQT_imag.pow(2) + margin)
+            return cqt.pow(2).sum(-3).add(margin).sqrt()
 
-        elif output_format == "Complex":
-            return torch.stack((CQT_real, CQT_imag), -1)
+        if output_format == "Complex":
+            return cqt.permute(0, 2, 3, 1)  # shape: (batch_size, n_bins, n_timesteps, 2)
 
-        elif output_format == "Phase":
-            phase_real = torch.cos(torch.atan2(CQT_imag, CQT_real))
-            phase_imag = torch.sin(torch.atan2(CQT_imag, CQT_real))
+        cqt_real, cqt_imag = cqt.split(self.n_bins, dim=-2)
+        if output_format == "Phase":
+            phase_real = torch.cos(torch.atan2(cqt_imag, cqt_real))
+            phase_imag = torch.sin(torch.atan2(cqt_imag, cqt_real))
             return torch.stack((phase_real, phase_imag), -1)
+
+        raise ValueError(f"Invalid output format: {output_format}.")
+
+
+class RegularCQT(BaseCQT):
+    def __init__(self, *args, pad_mode="reflect", **kwargs):
+        super().__init__(*args, **kwargs)
+
+        padding = self.kernel_width // 2 if self.center else 0
+
+        self.conv = nn.Conv1d(1,
+                              2 * self.n_bins,  # we handle real and imaginary part in parallel
+                              kernel_size=self.kernel_width,
+                              stride=self.hop_length,
+                              padding=padding,
+                              padding_mode=pad_mode,
+                              bias=False)
+
+        self.init_weights()
+
+
+class StreamingCQT(BaseCQT):
+    def __init__(self,
+                 *args,
+                 mirror: float = 0.,
+                 max_batch_size: int = 1,
+                 **kwargs):
+        super(StreamingCQT, self).__init__(*args, **kwargs)
+
+        if self.center:
+            mirrored_samples = int(mirror * (self.kernel_width - self.hop_length) / 2)
+            padding = self.kernel_width - self.hop_length - mirrored_samples
+        else:  # no padding
+            mirrored_samples = 0
+            padding = 0
+
+        self.conv = cc.CachedConv1d(1,
+                                    2 * self.n_bins,
+                                    kernel_size=self.kernel_width,
+                                    stride=self.hop_length,
+                                    padding=padding,
+                                    mirror=mirrored_samples,
+                                    max_batch_size=max_batch_size,
+                                    bias=False)
+
+        self.init_weights()
+
+
+class CQT:
+    regular_only_kwargs = ["pad_mode"]
+    streaming_only_kwargs = ["mirror", "max_batch_size"]
+
+    def __new__(cls, *args, **kwargs):
+        streaming = kwargs.pop("streaming", False)
+        if streaming:
+            for kwarg in cls.regular_only_kwargs:
+                kwargs.pop(kwarg, None)
+            return StreamingCQT(*args, **kwargs)
+
+        for kwarg in cls.streaming_only_kwargs:
+            kwargs.pop(kwarg, None)
+        return RegularCQT(*args, **kwargs)
 
 
 class HarmonicCQT(nn.Module):
@@ -367,7 +316,12 @@ class HarmonicCQT(nn.Module):
             fmax: Optional[float] = None,
             bins_per_semitone: int = 1,
             n_bins: int = 84,
-            center_bins: bool = True
+            center_bins: bool = True,
+            gamma: int = 0,
+            center: bool = True,
+            streaming: bool = False,
+            mirror: float = 0.,
+            max_batch_size: int = 1
     ):
         super(HarmonicCQT, self).__init__()
 
@@ -375,8 +329,10 @@ class HarmonicCQT(nn.Module):
             fmin = fmin / 2 ** ((bins_per_semitone - 1) / (24 * bins_per_semitone))
 
         self.cqt_kernels = nn.ModuleList([
-            CQT(sr=sr, hop_length=hop_length, fmin=h*fmin, fmax=fmax, n_bins=n_bins,
-                bins_per_octave=12*bins_per_semitone, output_format="Complex")
+            CQT(sr=sr, hop_length=hop_length, fmin=h * fmin, fmax=fmax, n_bins=n_bins,
+                bins_per_octave=12*bins_per_semitone, gamma=gamma, center=center,
+                streaming=streaming, mirror=mirror, max_batch_size=max_batch_size,
+                output_format="Complex")
             for h in harmonics
         ])
 

@@ -1,56 +1,70 @@
 import torch
-
+import argparse
+import datetime
 from pesto import load_model
 
 
-class Dummy(torch.nn.Module):
-    def forward(self, x):
-        return torch.ones(())
+def export_model(checkpoint_name, sampling_rate, chunk_size, script_name):
+    """Exports a model using torch.jit.trace and saves it to a file."""
+    step_size = 1000 * chunk_size / sampling_rate
+
+    print("Chunk size:", chunk_size)
+
+    model = load_model(
+        checkpoint_name,
+        step_size=step_size,
+        sampling_rate=sampling_rate,
+        streaming=True,
+        max_batch_size=4
+    )
+    model.eval()  # Set the model to evaluation mode
+
+    # Example input for tracing
+    example_input = torch.randn(3, chunk_size).clip(-1, 1)
+
+    # Export the model using torch.jit.trace
+    traced_model = torch.jit.trace(model, example_input)
+
+    # Save the traced model
+    traced_model.save(script_name)
+    print(f"Model successfully exported as '{script_name}'")
+
+    return model, script_name
 
 
-# options
-STEP_SIZE = 11.6
-SAMPLING_RATE = 44100
-MIRROR = 1.
+def validate_model(original_model, script_name, chunk_size):
+    """Loads the exported model and validates its output."""
+    loaded_model = torch.jit.load(script_name)
+    loaded_model.eval()
 
-CHUNK_SIZE = int(STEP_SIZE * SAMPLING_RATE / 1000 + 0.5)
-print(CHUNK_SIZE)
+    example_input = torch.randn(2, chunk_size).clip(-1, 1)
 
-CHECKPOINT_NAME = "mir-1k_g5_conf"
-SCRIPT_NAME = "1206.pt"
+    # Run the original and loaded models
+    with torch.no_grad():
+        original_output = original_model(example_input)
+        traced_output = loaded_model(example_input)
 
-model = load_model(CHECKPOINT_NAME,
-                   step_size=STEP_SIZE,
-                   sampling_rate=SAMPLING_RATE,
-                   streaming=True,
-                   max_batch_size=4,
-                   mirror=MIRROR)
-model.eval()  # Set the model to evaluation mode
+    # Compare outputs
+    for name, x1, x2 in zip(["pred", "conf", "vol", "act"], original_output, traced_output):
+        if torch.allclose(x1, x2):
+            print(name, ":", x1.shape, "\n", "Test passed: Outputs are close.\n")
+        else:
+            print(name, "Test failed: Significant difference in outputs.")
 
-# Example input for tracing (shape should match what your model expects)
-example_input = torch.randn(3, CHUNK_SIZE+20).clip(-1, 1)  # Modify according to your input shape
 
-# Export the model using torch.jit.trace
-traced_model = torch.jit.trace(model, example_input)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Export a model using torch.jit.trace and validate its outputs.")
+    parser.add_argument("checkpoint_name", type=str, help="Checkpoint name for loading the model.")
+    parser.add_argument("-r", "--sampling_rate", type=int, default=48000, help="Sampling rate of the model.")
+    parser.add_argument("-c", "--chunk_size", type=int, default=960, help="Chunk size for processing.")
+    parser.add_argument("-s", "--script_name", type=str, default=None, help="Optional custom script name.")
 
-# Save the traced model to a file
-traced_model.save(SCRIPT_NAME)
-print(f"Model successfully exported as '{SCRIPT_NAME}'")
+    args = parser.parse_args()
 
-# Load the exported TorchScript model
-loaded_model = torch.jit.load(SCRIPT_NAME)
-loaded_model.eval()  # Make sure it's in evaluation mode
+    # Construct default script name if not provided
+    if args.script_name is None:
+        date_str = datetime.datetime.now().strftime("%y%m%d")
+        args.script_name = f"{date_str}_sr{args.sampling_rate//1000}k_h{args.chunk_size}.pt"
 
-example_input = torch.randn(2, CHUNK_SIZE).clip(-1, 1)  # Modify according to your input shape
-
-# Run the original model and the loaded model
-with torch.no_grad():
-    original_output = model(example_input)
-    traced_output = loaded_model(example_input)
-
-# Test if the outputs are close
-for name, x1, x2 in zip(["pred", "conf", "vol", "act"], original_output, traced_output):
-    if torch.allclose(x1, x2):
-        print(name, ':', x1.shape, '\n', "Test passed: The traced model outputs are close to the original model outputs.\n")
-    else:
-        print(name, "Test failed: There is a significant difference between the traced and original model outputs.")
+    model, script_name = export_model(args.checkpoint_name, args.sampling_rate, args.chunk_size, args.script_name)
+    validate_model(model, script_name, args.chunk_size)

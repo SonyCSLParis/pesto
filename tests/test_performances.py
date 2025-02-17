@@ -10,7 +10,7 @@ from .utils import generate_synth_data
 
 @pytest.fixture
 def model():
-    return load_model('mir-1k', step_size=10.)
+    return load_model('mir-1k_g7', step_size=1.)
 
 
 @pytest.mark.parametrize('pitch, sr, reduction',
@@ -18,6 +18,10 @@ def model():
 def test_performances(model, pitch, sr, reduction):
     x = generate_synth_data(pitch, sr=sr)
 
-    preds, conf = model(x, sr=sr, return_activations=False)
+    preds, *_ = model(x, sr=sr, return_activations=False)
+
+    # remove boundary effects
+    print(preds)
+    preds = preds[10:-10]
 
     torch.testing.assert_close(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)

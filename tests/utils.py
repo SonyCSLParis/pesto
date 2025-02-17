@@ -13,8 +13,8 @@ def generate_synth_data(pitch: int, num_harmonics: int = 5, duration=2, sr=16000
         for k in range(1, num_harmonics+1)
     ], dim=1)
     # volume = torch.randn(()) * torch.arange(num_harmonics).neg().div(0.5).exp()
-    volume = torch.rand(num_harmonics)
+    volume = 0.5 * torch.rand(num_harmonics)
     volume[0] = 1
-    volume *= torch.randn(())
+    volume *= torch.randn(()).clip(min=0.1)
     audio = torch.sum(volume * harmonics, dim=1)
     return audio

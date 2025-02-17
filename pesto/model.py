@@ -166,18 +166,30 @@ class Resnet1d(nn.Module):
 
 
 class ConfidenceClassifier(nn.Module):
+    r"""A simple pre-trained classifier that returns whether a sample is voiced or not
+
+    # TODO: add args for this module, it should not be hardcoded
+    """
     def __init__(self):
         super(ConfidenceClassifier, self).__init__()
         self.conv = nn.Conv1d(1, 1, 39, stride=3)
-        self.linear = nn.Linear(48, 1)
+        self.linear = nn.Linear(72, 1)
 
     def forward(self, x):
+        r"""Computes the confidence in [0, 1] that a frame is voiced or not
+
+        Args:
+            x (torch.Tensor): shape (batch_size, channels, freq_bins)
+
+        Returns:
+            torch.Tensor: confidence in [0, 1], shape (batch_size,)
+        """
         geometric_mean = x.log().mean(dim=-1, keepdim=True).exp()
         artithmetric_mean = x.mean(dim=-1, keepdim=True).clip_(min=1e-8)
         flatness = geometric_mean / artithmetric_mean
 
         x = F.relu(self.conv(x.unsqueeze(1)).squeeze(1))
-        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1)))
+        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1))).squeeze(-1)
 
 
 class PESTO(nn.Module):
@@ -225,7 +237,7 @@ class PESTO(nn.Module):
             activations (torch.Tensor): activations of the model, shape (batch_size?, num_timesteps, output_dim)
         """
         batch_size = audio_waveforms.size(0) if audio_waveforms.ndim == 2 else None
-        x = self.preprocessor(audio_waveforms, sr=sr)
+        x = self.preprocessor(audio_waveforms, sr=sr).flatten(0, 1)
 
         # compute volume and confidence
         energy = x.mul_(log(10) / 10.).exp().squeeze_(1)
@@ -235,19 +247,14 @@ class PESTO(nn.Module):
 
         x = self.crop_cqt(x)  # the CQT has to be cropped beforehand
 
-
-        # # compute CQT based on Wiener entropy
-        # geometric_mean = x.mean(dim=-1).mul(log(10) / 20).exp()
-        # artithmetric_mean = x.mul(log(10) / 20).exp().mean(dim=-1).clip_(min=1e-8)
-        # confidence = 1 - geometric_mean / artithmetric_mean
-
-        # flatten batch_size and time_steps since anyway predictions are made on CQT frames independently
-        if batch_size:
-            x = x.flatten(0, 1)
-
         activations = self.encoder(x)
-        if batch_size:  # TODO: unflatten maybe?
+
+        if batch_size is None:
+            confidence.squeeze_(0)
+        else:
             activations = activations.view(batch_size, -1, activations.size(-1))
+            confidence = confidence.view(batch_size, -1)
+            vol = vol.view(batch_size, -1)
 
         activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
 

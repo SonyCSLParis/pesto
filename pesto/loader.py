@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -5,6 +6,9 @@ import torch
 
 from .data import Preprocessor
 from .model import PESTO, Resnet1d
+
+
+log = logging.getLogger(__name__)
 
 
 def load_model(checkpoint: str,
@@ -19,6 +23,7 @@ def load_model(checkpoint: str,
         step_size (float): hop size in milliseconds
         sampling_rate (int, optional): sampling rate of the audios.
             If not provided, it can be inferred dynamically as well.
+    
     Returns:
         PESTO: instance of PESTO model
     """
@@ -47,7 +52,11 @@ def load_model(checkpoint: str,
                   preprocessor=preprocessor,
                   crop_kwargs=hparams["pitch_shift"],
                   reduction=hparams["reduction"])
-    model.load_state_dict(state_dict, strict=False)
+    try:
+        model.load_state_dict(state_dict, strict=True)
+    except RuntimeError as e:
+        log.warning(e)
+        model.load_state_dict(state_dict, strict=False)
     model.eval()
 
     return model

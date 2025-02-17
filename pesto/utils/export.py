@@ -24,7 +24,6 @@ def export(fmt, output_file, timesteps, pitch, confidence, activations):
 
 
 def export_csv(output_file, timesteps, pitch, confidence):
-    print(timesteps.shape, pitch.shape, confidence.shape)
     data = np.stack((timesteps, pitch, confidence), axis=1)
     header = "time,frequency,confidence"
 

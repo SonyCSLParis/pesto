@@ -138,11 +138,11 @@ import torch
 from pesto import load_model
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-pesto_model = load_model("mir-1k", step_size=20.).to(device)
+pesto_model = load_model("mir-1k_g7", step_size=20.).to(device)
 
 for x, sr in ...:
     x = x.to(device)
-    predictions, confidence, activations = pesto_model(x, sr)
+    predictions, confidence, amplitude, activations = pesto_model(x, sr)
     ...
 ```
 
@@ -159,14 +159,50 @@ from pesto import load_model
 class MyGreatModel(nn.Module):
     def __init__(self, step_size, sr=44100, *args, **kwargs):
         super(MyGreatModel, self).__init__()
-        self.f0_estimator = load_model("mir-1k", step_size, sampling_rate=sr)
+        self.f0_estimator = load_model("mir-1k_g7", step_size, sampling_rate=sr)
         ...
 
     def forward(self, x):
         with torch.no_grad():
-            f0, conf = self.f0_estimator(x, convert_to_freq=True, return_activations=False)
+            f0, conf, amp = self.f0_estimator(x, convert_to_freq=True, return_activations=False)
         ...
 ```
+
+### NEW: Streaming implementation
+
+PESTO can now process directly audio streams instead of full audio files.
+To use a streamable version of PESTO, just add `streaming=True` to the `load_model` function.
+
+```python
+import time
+import torch
+
+from pesto import load_model
+
+
+pesto_model = load_model('mir-1k_g7',
+                         step_size=5.,
+                         sampling_rate=48000,
+                         streaming=True,  # that's it
+                         max_batch_size=4)
+
+while True:
+    buffers = torch.randn(3, 240)  # acquire a batch of 3 audio buffers
+    pitch, conf, amp = pesto_model(buffers, return_activations=False)
+    print(pitch)
+    time.sleep(0.005)
+```
+
+**WARNING:** The streaming implementation of PESTO uses an internal circular buffer in the CQT module for each batched dimension.
+Do not use the same model for different streams sequentially.
+
+### NEW: Export compiled model
+
+For reducing further latency and/or integrating PESTO in anotaher application, the trained model can be compiled.
+To do so, we provide a script `realtime/export_jit.py`.
+
+A drawback of this method is that the parameters of the `load_model` function (sampling rate, step size...) are frozen 
+and cannot be modified after, which makes this method less flexible.
 
 ## Performances
 

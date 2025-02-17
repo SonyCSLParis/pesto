@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.0
+
+- Implement `StreamingVQT`
+- Return a confidence score and an amplitude in addition to the predicted pitch
+- Add tests
+
 ## v1.0.0
 
 - Change API under the hood to make it more object-oriented

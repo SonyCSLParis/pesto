@@ -21,7 +21,6 @@ def test_performances(model, pitch, sr, reduction):
     preds, *_ = model(x, sr=sr, return_activations=False)
 
     # remove boundary effects
-    print(preds)
     preds = preds[10:-10]
 
     torch.testing.assert_close(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)

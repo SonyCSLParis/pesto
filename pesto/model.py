@@ -176,12 +176,20 @@ class ConfidenceClassifier(nn.Module):
         self.linear = nn.Linear(72, 1)
 
     def forward(self, x):
+        r"""Computes the confidence in [0, 1] that a frame is voiced or not
+
+        Args:
+            x (torch.Tensor): shape (batch_size, channels, freq_bins)
+
+        Returns:
+            torch.Tensor: confidence in [0, 1], shape (batch_size,)
+        """
         geometric_mean = x.log().mean(dim=-1, keepdim=True).exp()
         artithmetric_mean = x.mean(dim=-1, keepdim=True).clip_(min=1e-8)
         flatness = geometric_mean / artithmetric_mean
 
         x = F.relu(self.conv(x.unsqueeze(1)).squeeze(1))
-        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1)))
+        return torch.sigmoid(self.linear(torch.cat((x, flatness), dim=-1))).squeeze(-1)
 
 
 class PESTO(nn.Module):

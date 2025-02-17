@@ -1,23 +1,48 @@
-import itertools
-
 import pytest
 
 import torch
 
-from pesto import load_model
 from .utils import generate_synth_data
+
+
+DATE = "250217"
+SAMPLE_RATE = 48000
+HOP = 256
+BATCHED = True
+MARGIN = 8192 // (2 * HOP)
 
 
 @pytest.fixture
 def model():
-    return load_model('mir-1k', step_size=10.)
+    return torch.jit.load(f"realtime/{DATE}_sr{SAMPLE_RATE // 1000:d}k_h{HOP:d}.pt")
 
 
-@pytest.mark.parametrize('pitch, sr, reduction',
-                         itertools.product(range(50, 80), [16000, 44100, 48000], ["argmax", "alwa"]))
-def test_performances(model, pitch, sr, reduction):
-    x = generate_synth_data(pitch, sr=sr)
+@pytest.mark.parametrize('pitch', range(50, 80))
+def test_performances(model, pitch):
+    x = generate_synth_data(pitch, sr=SAMPLE_RATE)
+    if BATCHED:
+        x.unsqueeze_(0)
 
-    preds, conf = model(x, sr=sr, return_activations=False)
+    preds, *_ = model(x)
 
-    torch.testing.assert_close(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)
+    # remove first elems of the audio
+    preds = preds[..., MARGIN:]
+
+    torch.testing.assert_allclose(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)
+
+
+@pytest.mark.parametrize('pitch', range(50, 80))
+def test_streaming(model, pitch):
+    x = generate_synth_data(pitch, duration=1000 * HOP / SAMPLE_RATE, sr=SAMPLE_RATE)
+    if BATCHED:
+        x.unsqueeze_(0)
+
+    preds = []
+    for chunk in x.split(HOP, dim=-1):
+        p, *_ = model(chunk)
+        preds.append(p)
+
+    preds = torch.cat(preds, dim=int(BATCHED))
+    preds = preds[..., MARGIN:]
+
+    torch.testing.assert_allclose(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)

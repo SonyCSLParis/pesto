@@ -35,7 +35,7 @@ def load_model(checkpoint: str,
             raise FileNotFoundError(f"You passed an invalid checkpoint file: {checkpoint}.")
 
     # load checkpoint
-    checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+    checkpoint = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
     hparams = checkpoint["hparams"]
     state_dict = checkpoint["state_dict"]
     hcqt_params = checkpoint["hcqt_params"]

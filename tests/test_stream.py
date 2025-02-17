@@ -34,6 +34,5 @@ def test_performances(model, pitch, reduction):
         preds.append(p)
 
     preds = torch.cat(preds, dim=1)[5:]
-    print(preds, preds.shape)
 
     torch.testing.assert_close(preds, torch.full_like(preds, pitch), atol=0.1, rtol=0.1)

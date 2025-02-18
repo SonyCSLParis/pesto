@@ -121,7 +121,7 @@ import pesto
 x, sr = torchaudio.load("my_file.wav")
 x = x.mean(dim=0)  # PESTO takes mono audio as input
 
-# Predict pitch
+# Predict pitch. x can be (num_samples) or (batch, num_samples)
 timesteps, pitch, confidence, activations = pesto.predict(x, sr)
 
 # Using a custom checkpoint:
@@ -214,6 +214,8 @@ python -m realtime.export_jit --help
 ## Performance and Speed Benchmarks
 
 PESTO outperforms other self-supervised baselines on datasets such as MIR-1K and MDB-stem-synth and achieves performance close to supervised methods like CREPE (with 800x more parameters).
+
+![image](https://github.com/SonyCSLParis/pesto/assets/36546630/d6ae0306-ba8b-465a-8ca7-f916479a0ba5)
 
 **Benchmark Example:**
 - **Audio File:** `wav` (2m51s)

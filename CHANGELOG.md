@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- fix issue in `__init__.py`
+- remove scary but harmless warning
+
 ## v2.0.0
 
 - Implement `StreamingVQT`

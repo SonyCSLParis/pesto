@@ -10,6 +10,9 @@ from .model import PESTO, Resnet1d
 
 log = logging.getLogger(__name__)
 
+harmless_message = ('Error(s) in loading state_dict for PESTO:\n'
+                    '\tMissing key(s) in state_dict: "preprocessor.hcqt_kernels.cqt_kernels.0.sqrt_lengths", "preprocessor.hcqt_kernels.cqt_kernels.0.conv.weight". ')
+
 
 def load_model(checkpoint: str,
                step_size: float,
@@ -55,7 +58,8 @@ def load_model(checkpoint: str,
     try:
         model.load_state_dict(state_dict, strict=True)
     except RuntimeError as e:
-        log.warning(e)
+        if str(e) != harmless_message:
+            log.warning(repr(e))
         model.load_state_dict(state_dict, strict=False)
     model.eval()
 

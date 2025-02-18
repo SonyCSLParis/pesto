@@ -1,6 +1,6 @@
 # 🌿 PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective
 
-**tl;dr**: PESTO is a fast and powerful pitch estimator based on machine learning. 
+**tl;dr**: 🌿 PESTO is a fast and powerful pitch estimator based on machine learning. 
 
 This repository provides a minimal code implementation for inference only. For full training details and research experiments, please refer to the [full implementation](https://github.com/SonyCSLParis/pesto-full) or the [paper 📝(arXiv)](https://arxiv.org/abs/2309.02265).
 

@@ -5,7 +5,7 @@ def parse_args():
     parser = argparse.ArgumentParser(prog='PESTO', description='Efficient pitch estimation')
     parser.add_argument('audio_files', metavar='FILE', type=str, nargs='+',
                         help='audio files to process')
-    parser.add_argument('-m', '--model_name', type=str, default="mir-1k", choices=["mir-1k"],
+    parser.add_argument('-m', '--model_name', type=str, default="mir-1k_g7", choices=["mir-1k_g7"],
                         help='choice of the model')
     parser.add_argument('-o', '--output', metavar='DIR', type=str, default=None,
                         help='directory to save the output predictions')

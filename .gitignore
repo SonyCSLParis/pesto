@@ -4,7 +4,11 @@
 .DS_Store
 dist/
 build/
+logs/
+pesto/old_weights
 
 **/*.csv
 **/*.mid
 **/*.png
+**/*.pdf
+**/*.pt

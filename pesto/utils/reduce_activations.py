@@ -13,7 +13,11 @@ def reduce_activations(activations: torch.Tensor, reduction: str = "alwa") -> to
         torch.Tensor: pitches as fractions of MIDI semitones, shape (*)
     """
     device = activations.device
-    num_bins = activations.size(-1)
+    num_bins: int = activations.size(-1)
+
+    if torch.is_tensor(num_bins):  # JIT shit
+        num_bins = num_bins.item()
+
     bps, r = divmod(num_bins, 128)
     assert r == 0, f"Activations should have output size 128*bins_per_semitone, got {num_bins}."
 

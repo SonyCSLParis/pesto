@@ -10,7 +10,7 @@ from .utils import generate_synth_data
 
 @pytest.fixture
 def model():
-    return load_model('mir-1k', step_size=10.)
+    return load_model('mir-1k_g7', step_size=10.)
 
 
 @pytest.fixture
@@ -28,10 +28,11 @@ def test_shape_no_batch(model, synth_data_16k, reduction):
 
     num_timesteps = int(num_samples * 1000 / (model.hop_size * sr)) + 1
 
-    preds, conf, activations = model(x, sr=sr, return_activations=True)
+    preds, conf, amplitude, activations = model(x, sr=sr, return_activations=True)
 
     assert preds.shape == (num_timesteps,)
     assert conf.shape == (num_timesteps,)
+    assert amplitude.shape == (num_timesteps,)
     assert activations.shape == (num_timesteps, 128 * model.bins_per_semitone)
 
 
@@ -49,7 +50,7 @@ def test_shape_batch(model, sr, reduction):
 
     num_timesteps = int(batch.size(-1) * 1000 / (model.hop_size * sr)) + 1
 
-    preds, conf, activations = model(batch, sr=sr, return_activations=True)
+    preds, conf, amplitude, activations = model(batch, sr=sr, return_activations=True)
 
     assert preds.shape == (batch_size, num_timesteps)
     assert conf.shape == (batch_size, num_timesteps)

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.1
+
+- fix issue in `__init__.py`
+- remove scary but harmless warning
+
+## v2.0.0
+
+- Implement `StreamingVQT`
+- Return a confidence score and an amplitude in addition to the predicted pitch
+- Add tests
+
 ## v1.0.0
 
 - Change API under the hood to make it more object-oriented

@@ -19,7 +19,7 @@ def _predict(x: torch.Tensor,
     preds, confidence, activations = [], [], []
     try:
         for chunk in x.chunk(chunks=num_chunks):
-            pred, conf, act = model(chunk, sr=sr, convert_to_freq=convert_to_freq, return_activations=True)
+            pred, conf, vol, act = model(chunk, sr=sr, convert_to_freq=convert_to_freq, return_activations=True)
             preds.append(pred)
             confidence.append(conf)
             activations.append(act)
@@ -41,7 +41,7 @@ def _predict(x: torch.Tensor,
 def predict(x: torch.Tensor,
             sr: int,
             step_size: float = 10.,
-            model_name: str = "mir-1k",
+            model_name: str = "mir-1k_g7",
             reduction: str = "alwa",
             num_chunks: int = 1,
             convert_to_freq: bool = True,
@@ -86,7 +86,7 @@ def predict(x: torch.Tensor,
 
 def predict_from_files(
         audio_files: Union[str, Sequence[str]],
-        model_name: str = "mir-1k",
+        model_name: str = "mir-1k_g7",
         output: Optional[str] = None,
         step_size: float = 10.,
         reduction: str = "alwa",

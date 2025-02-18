@@ -22,6 +22,7 @@ classifiers = [
 ]
 dependencies = [
     'numpy>=1.21.5',
+    'omegaconf>=2.3.0',
     'scipy>=1.8.1',
     'tqdm>=4.66.1',
     'torch>=2.0.1',
@@ -40,6 +41,9 @@ source = "https://github.com/SonyCSLParis/pesto"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"
+
+[tool.setuptools]
+packages = ["pesto"]
 
 [tool.setuptools.dynamic]
 version = {attr = "pesto.__version__"}

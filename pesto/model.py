@@ -256,7 +256,7 @@ class PESTO(nn.Module):
             confidence = confidence.view(batch_size, -1)
             vol = vol.view(batch_size, -1)
 
-        activations = activations.roll(-round(self.shift.cpu().item() * self.bins_per_semitone), -1)
+        activations = activations.roll(-torch.round(self.shift * self.bins_per_semitone).int().item(), -1)
 
         preds = reduce_activations(activations, reduction=self.reduction)
 

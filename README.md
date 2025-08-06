@@ -2,7 +2,7 @@
 
 **tl;dr**: 🌿 PESTO is a fast and powerful pitch estimator based on machine learning. 
 
-This repository provides a minimal code implementation for inference only. For full training details and research experiments, please refer to the [full implementation](https://github.com/SonyCSLParis/pesto-full) or the [paper 📝(arXiv)](https://arxiv.org/abs/2309.02265).
+This repository provides a minimal code implementation for inference only. For full training details and research experiments, please refer to the [full implementation](https://github.com/SonyCSLParis/pesto-full) or the papers [PESTO v1 📝(arXiv)](https://arxiv.org/abs/2309.02265) and [PESTO v2 📝(arXiv)](https://www.arxiv.org/abs/2508.01488).
 
 ## Table of Contents
 1. [Installation](#installation)

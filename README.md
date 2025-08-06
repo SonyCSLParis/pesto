@@ -251,7 +251,7 @@ Feel free to contact us with any ideas to enhance PESTO.
 
 ## Citation
 
-If you use this work, please cite:
+If you use this work, please consider citing the following papers:
 ```bibtex
 @inproceedings{PESTO,
     author = {Riou, Alain and Lattner, Stefan and Hadjeres, Gaëtan and Peeters, Geoffroy},
@@ -259,6 +259,18 @@ If you use this work, please cite:
     publisher = {International Society for Music Information Retrieval},
     title = {PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective},
     year = {2023}
+}
+```
+
+```bibtex
+@article{riouPESTORealtimePitch2025,
+  title = {{{PESTO}}: {{Real-time}} Pitch Estimation with Self-Supervised Transposition-Equivariant Objective},
+  author = {Riou, Alain and Torres, Bernardo and Hayes, Ben and Lattner, Stefan and Hadjeres, Ga{\"e}tan and Richard, Ga{\"e}l and Peeters, Geoffroy},
+  year = {2025},
+  journal = {arXiv preprint arXiv: 2508.01488},
+  eprint = {2508.01488},
+  primaryclass = {cs.SD},
+  archiveprefix = {arXiv}
 }
 ```
 

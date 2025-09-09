@@ -16,12 +16,13 @@ def _predict(x: torch.Tensor,
              model: PESTO,
              num_chunks: int = 1,
              convert_to_freq: bool = True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    preds, confidence, activations = [], [], []
+    preds, confidence, volumes, activations = [], [], [], []
     try:
         for chunk in x.chunk(chunks=num_chunks):
             pred, conf, vol, act = model(chunk, sr=sr, convert_to_freq=convert_to_freq, return_activations=True)
             preds.append(pred)
             confidence.append(conf)
+            volumes.append(vol)
             activations.append(act)
     except torch.cuda.OutOfMemoryError:
         raise torch.cuda.OutOfMemoryError("Got an out-of-memory error while performing pitch estimation. "
@@ -30,12 +31,13 @@ def _predict(x: torch.Tensor,
 
     preds = torch.cat(preds, dim=0)
     confidence = torch.cat(confidence, dim=0)
+    volumes = torch.cat(volumes, dim=0)
     activations = torch.cat(activations, dim=0)
 
     # compute timesteps
-    timesteps = torch.arange(preds.size(-1), device=x.device) * model.hop_size
+    timesteps = torch.arange(preds.size(-1), dtype=torch.float32, device=x.device) * model.hop_size / 1000
 
-    return timesteps, preds, confidence, activations
+    return timesteps, preds, confidence, volumes, activations
 
 
 def predict(x: torch.Tensor,

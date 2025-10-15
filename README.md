@@ -2,7 +2,7 @@
 
 **tl;dr**: 🌿 PESTO is a fast and powerful pitch estimator based on machine learning. 
 
-This repository provides a minimal code implementation for inference only. For full training details and research experiments, please refer to the [full implementation](https://github.com/SonyCSLParis/pesto-full) or the [paper 📝(arXiv)](https://arxiv.org/abs/2309.02265).
+This repository provides a minimal code implementation for inference only. For full training details and research experiments, please refer to the [full implementation](https://github.com/SonyCSLParis/pesto-full) or the papers [PESTO v1 📝(arXiv)](https://arxiv.org/abs/2309.02265) and [PESTO v2 📝(arXiv)](https://www.arxiv.org/abs/2508.01488).
 
 ## Table of Contents
 1. [Installation](#installation)
@@ -251,7 +251,7 @@ Feel free to contact us with any ideas to enhance PESTO.
 
 ## Citation
 
-If you use this work, please cite:
+If you use this work, please consider citing the following papers:
 ```bibtex
 @inproceedings{PESTO,
     author = {Riou, Alain and Lattner, Stefan and Hadjeres, Gaëtan and Peeters, Geoffroy},
@@ -259,6 +259,18 @@ If you use this work, please cite:
     publisher = {International Society for Music Information Retrieval},
     title = {PESTO: Pitch Estimation with Self-supervised Transposition-equivariant Objective},
     year = {2023}
+}
+```
+
+```bibtex
+@article{riouPESTORealtimePitch2025,
+  title = {{{PESTO}}: {{Real-time}} Pitch Estimation with Self-Supervised Transposition-Equivariant Objective},
+  author = {Riou, Alain and Torres, Bernardo and Hayes, Ben and Lattner, Stefan and Hadjeres, Ga{\"e}tan and Richard, Ga{\"e}l and Peeters, Geoffroy},
+  year = {2025},
+  journal = {arXiv preprint arXiv: 2508.01488},
+  eprint = {2508.01488},
+  primaryclass = {cs.SD},
+  archiveprefix = {arXiv}
 }
 ```
 

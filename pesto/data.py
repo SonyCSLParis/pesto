@@ -12,10 +12,13 @@ class ToLogMagnitude(nn.Module):
         self.eps = torch.finfo(torch.float32).eps
 
     def forward(self, x):
-        x = x.abs()
+        # Handle both real/imaginary pairs and complex tensors
+        if x.shape[-1] == 2:
+            x = torch.sqrt(x[..., 0] ** 2 + x[..., 1] ** 2)
+        else:
+            x = x.abs()
         x.clamp_(min=self.eps).log10_().mul_(20)
         return x
-
 
 
 class Preprocessor(nn.Module):
@@ -24,10 +27,10 @@ class Preprocessor(nn.Module):
     Args:
         hop_size (float): step size between consecutive CQT frames (in milliseconds)
     """
-    def __init__(self,
-                 hop_size: float,
-                 sampling_rate: Optional[int] = None,
-                 **hcqt_kwargs):
+
+    def __init__(
+        self, hop_size: float, sampling_rate: Optional[int] = None, **hcqt_kwargs
+    ):
         super(Preprocessor, self).__init__()
 
         # HCQT
@@ -62,10 +65,10 @@ class Preprocessor(nn.Module):
         """
         # compute CQT from input waveform, and invert dims for (time_steps, num_harmonics, freq_bins)
         # in other words, time becomes the batch dimension, enabling efficient processing for long audios.
-        complex_cqt = torch.view_as_complex(self.hcqt(x, sr=sr)).permute(0, 3, 1, 2)
+        hcqt_output = self.hcqt(x, sr=sr).permute(0, 3, 1, 2, 4)
 
         # convert to dB
-        return self.to_log(complex_cqt)
+        return self.to_log(hcqt_output)
 
     def hcqt(self, audio: torch.Tensor, sr: Optional[int] = None) -> torch.Tensor:
         r"""Compute the Harmonic CQT of the input audio after eventually recreating the kernels
@@ -89,6 +92,6 @@ class Preprocessor(nn.Module):
 
     def _reset_hcqt_kernels(self) -> None:
         hop_length = int(self.hop_size * self.hcqt_sr / 1000 + 0.5)
-        self.hcqt_kernels = HarmonicCQT(sr=self.hcqt_sr,
-                                        hop_length=hop_length,
-                                        **self.hcqt_kwargs).to(self._device.device)
+        self.hcqt_kernels = HarmonicCQT(
+            sr=self.hcqt_sr, hop_length=hop_length, **self.hcqt_kwargs
+        ).to(self._device.device)

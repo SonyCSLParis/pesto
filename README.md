@@ -207,7 +207,31 @@ For reduced latency and easier integration into other applications, you can expo
 ```shell
 python -m realtime.export_jit --help
 ```
-**Note:** When using the compiled model, parameters like sampling rate and step size become fixed and cannot be modified later.
+
+You can also export to ONNX format for greater cross-platform compatibility:
+```shell
+python -m realtime.export_onnx --help
+```
+
+ONNX models are more than twice as fast as TorchScript (JIT) and very stable (~0.7 ± 0.03 ms inference) since they are stateless. However, because of this they require manual cache handling as shown below:
+```python
+import onnxruntime as ort
+import numpy as np
+
+session = ort.InferenceSession("mir-1k_g7_44100_1024.onnx")
+cache_size = session.get_inputs()[1].shape[1]  # Get cache size from model
+cache_state = np.zeros((1, cache_size), dtype=np.float32)  # Initialize cache
+
+for audio_chunk in audio_chunks:
+    outputs = session.run(None, {
+        "audio": audio_chunk,
+        "cache": cache_state
+    })
+    prediction, confidence, volume, activations, cache_out = outputs
+    cache_state = cache_out  # Update for next iteration
+```
+
+**Note:** When using the compiled models, parameters like sampling rate and step size become fixed and cannot be modified later.
 
 ---
 
